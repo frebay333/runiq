@@ -928,7 +928,7 @@ Previous week runs: ${(a.prevWeekRuns || []).map(r => `${r.day}: ${r.name} (${r.
 ${planCtx}`;
 
   try {
-    const resp = await fetch('/api/anthropic/v1/messages', {
+    const resp = await fetch('/api/claude', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
       body: JSON.stringify({
@@ -996,7 +996,7 @@ When the coach asks you to generate or finalize the plan, respond with the plan 
 Otherwise respond conversationally as a knowledgeable assistant coach. Be direct and professional with Coach Mike.`;
 
   try {
-    const resp = await fetch('/api/anthropic/v1/messages', {
+    const resp = await fetch('/api/claude', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
       body: JSON.stringify({

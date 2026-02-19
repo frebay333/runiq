@@ -25,9 +25,45 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path.startswith("/api/anthropic"):
             self._proxy_anthropic()
+        elif self.path == "/api/claude":
+            self._proxy_claude()
+        elif self.path == "/api/callback":
+            self.send_response(501)
+            self.end_headers()
         else:
             self.send_response(404)
             self.end_headers()
+
+    def _proxy_claude(self):
+        import os
+        api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length)
+        req = urllib.request.Request(
+            'https://api.anthropic.com/v1/messages',
+            data=body,
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': api_key,
+                'anthropic-version': '2023-06-01',
+            },
+            method='POST'
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                resp_body = resp.read()
+                self.send_response(resp.status)
+                self._cors()
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(resp_body)
+        except urllib.error.HTTPError as e:
+            err_body = e.read()
+            self.send_response(e.code)
+            self._cors()
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(err_body)
 
     def _proxy_anthropic(self):
         # Strip /api/anthropic prefix to get the real path

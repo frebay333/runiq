@@ -1091,14 +1091,20 @@ function buildWorkoutHistory() {
 function selectWorkout(activity, el) {
   document.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
+  const isFirstLoad = !APP.currentWorkout || !APP.chatInitialized;
   APP.currentWorkout = activity;
-  APP.chatHistory = [];
-  APP.chatInitialized = false;
-  document.getElementById('chat-messages').innerHTML = '';
-  document.getElementById('suggested-replies').innerHTML = '';
   renderWorkoutBanner(activity);
   document.getElementById('ping-btn').className = 'ping-btn';
-  initCoachChat();
+  if (isFirstLoad) {
+    APP.chatHistory = [];
+    APP.chatInitialized = false;
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('suggested-replies').innerHTML = '';
+    initCoachChat();
+  } else {
+    // Just update the banner context — don't restart the whole chat
+    addMsg('ai', `Switched to: ${activity.name} — ${actToMi(activity).toFixed(1)} mi @ ${fmtPace(actPaceMi(activity))}/mi. What do you want to dig into?`);
+  }
 }
 
 function renderWorkoutBanner(a) {
@@ -1216,6 +1222,8 @@ function renderHRChart(a) {
 
 // ── COACH CHAT ───────────────────────────────────────────────
 async function initCoachChat() {
+  if (APP._chatRunning) return;
+  APP._chatRunning = true;
   if (!APP.currentWorkout) {
     if (APP.activities.length) {
       APP.currentWorkout = APP.activities[0];
@@ -1243,7 +1251,7 @@ async function initCoachChat() {
 
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
-  const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 150 words.' };
+  const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
   const systemPrompt = `${p.prompt}
 
@@ -1253,10 +1261,10 @@ ${workoutDetail}
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
 
-Give your post-workout analysis now. Reference the specific numbers. End with 1-2 questions.`;
+Give a SHORT post-workout reaction — 2-3 sentences max, like a text from a coach. Reference 1-2 specific numbers. End with ONE question.`;
 
   try {
-    const res = await fetch('/api/anthropic/v1/messages', {
+    const res = await fetch('/api/claude', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
       body: JSON.stringify({
@@ -1276,10 +1284,12 @@ Give your post-workout analysis now. Reference the specific numbers. End with 1-
   } catch(e) {
     hideTyping();
     addMsg('ai', `Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`);
+    APP._chatRunning = false;
   }
 
   // Weekly summary panel
   renderWeeklySummary();
+  APP._chatRunning = false;
 }
 
 function getSuggestions() {
@@ -1306,7 +1316,7 @@ async function sendMessage() {
   const a = APP.currentWorkout;
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
-  const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 150 words.' };
+  const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
   const systemPrompt = `${p.prompt}
 
@@ -1314,7 +1324,7 @@ WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPac
 RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.`;
 
   try {
-    const res = await fetch('/api/anthropic/v1/messages', {
+    const res = await fetch('/api/claude', {
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
