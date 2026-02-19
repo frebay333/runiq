@@ -241,6 +241,30 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .cn-date{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);}
 .cn-text{font-size:12px;line-height:1.6;}
 
+/* Activity exclusion list */
+.activity-list-panel{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);margin-top:14px;overflow:hidden;}
+.activity-list-header{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.activity-list-header:hover{background:var(--s2);}
+.activity-list-toggle{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;}
+.activity-list-body{display:none;max-height:300px;overflow-y:auto;}
+.activity-list-body.open{display:block;}
+.activity-row{display:grid;grid-template-columns:1fr 60px 70px 65px 26px;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);transition:background .15s;}
+.activity-row:last-child{border-bottom:none;}
+.activity-row:hover{background:var(--s2);}
+.activity-row.excluded{opacity:.3;text-decoration:line-through;}
+.act-name{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.act-date{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);}
+.act-dist{font-family:'DM Mono',monospace;font-size:10px;}
+.act-pace{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);}
+.act-remove{background:none;border:1px solid var(--border);border-radius:2px;color:var(--muted);font-size:11px;width:20px;height:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;}
+.act-remove:hover{background:rgba(255,77,46,.15);border-color:var(--accent2);color:var(--accent2);}
+.act-remove.restore{color:var(--accent);border-color:var(--muted2);}
+.act-remove.restore:hover{background:rgba(232,255,71,.1);border-color:var(--accent);}
+.act-list-cols{display:grid;grid-template-columns:1fr 60px 70px 65px 26px;gap:6px;padding:5px 16px;border-bottom:1px solid var(--border);background:var(--s2);}
+.act-col-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.excluded-count{font-family:'DM Mono',monospace;font-size:9px;color:var(--orange);padding:5px 16px;background:var(--s2);border-top:1px solid var(--border);display:none;}
+.excluded-count.visible{display:block;}
+
 /* scrollbar */
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -360,6 +384,24 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
             </div>
           </div>
         </div>
+        <div class="activity-list-panel">
+          <div class="activity-list-header" onclick="toggleActivityList()">
+            <div class="card-title" style="margin:0;border:none;">Activities in Window</div>
+            <span class="activity-list-toggle" id="act-list-toggle">▼ SHOW</span>
+          </div>
+          <div class="activity-list-body" id="activity-list-body">
+            <div class="act-list-cols">
+              <div class="act-col-label">Activity</div>
+              <div class="act-col-label">Date</div>
+              <div class="act-col-label">Distance</div>
+              <div class="act-col-label">Pace</div>
+              <div class="act-col-label"></div>
+            </div>
+            <div id="activity-rows"></div>
+            <div class="excluded-count" id="excluded-count"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title">Method Comparison — Marathon</div>
           <div class="grid-3" style="gap:10px;">
@@ -471,7 +513,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       <div class="workout-banner">
         <div class="banner-top">
           <div style="flex:1">
-            <div class="banner-title" id="banner-title">Loading workout...</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="banner-title" id="banner-title">Loading workout...</div>
+              <a id="strava-banner-link" href="#" target="_blank" style="font-family:'DM Mono',monospace;font-size:9px;color:#fc4c02;text-decoration:none;padding:2px 8px;border:1px solid rgba(252,76,2,.3);border-radius:2px;display:none;transition:all .15s;" onmouseover="this.style.background='rgba(252,76,2,.1)'" onmouseout="this.style.background='transparent'">↗ Strava</a>
+            </div>
             <div class="banner-stats" id="banner-stats"></div>
           </div>
           <div class="coach-ind">
@@ -556,6 +601,7 @@ const APP = {
   chatHistory: [],
   chatInitialized: false,
   weeklyMi: [],
+  excluded: new Set(),
 };
 
 // ── INIT ────────────────────────────────────────────────────
@@ -690,6 +736,7 @@ async function bootApp() {
   if (!APP.demoMode) {
     await loadStravaData();
   } else {
+    APP.excluded = new Set();
     finalizeApp();
   }
 }
@@ -705,11 +752,7 @@ async function loadStravaData() {
 
     // Activities — 16 weeks back
     const acts = await stravaGet('/athlete/activities?per_page=200');
-    console.log('Strava returned', acts.length, 'activities');
-    console.log('First 3:', acts.slice(0,3).map(a => ({name:a.name, date:a.start_date, type:a.type, sport:a.sport_type})));
     APP.activities = acts.filter(a => a.type === 'Run' || a.sport_type === 'Run');
-    console.log('After Run filter:', APP.activities.length, 'runs');
-    console.log('Most recent:', APP.activities[0]?.start_date, APP.activities[0]?.name);
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -798,11 +841,12 @@ function updateEstimates() {
 
   document.getElementById('method-blurb').textContent = METHOD_DESC[method];
 
+  renderActivityList();
   if (!APP.activities.length) return;
 
   // Filter to window
   const cutoff = Date.now() - weeks * 7 * 86400000;
-  const recent = APP.activities.filter(a => new Date(a.start_date) >= cutoff);
+  const recent = APP.activities.filter(a => new Date(a.start_date) >= cutoff && !APP.excluded.has(a.id));
 
   if (!recent.length) return;
 
@@ -1063,7 +1107,7 @@ function setPersona(id, silent) {
 function buildWorkoutHistory() {
   const container = document.getElementById('workout-history');
   container.innerHTML = '';
-  const recent = APP.activities.slice(0, 10);
+  const recent = APP.activities.slice(0, 30);
   if (!recent.length) {
     container.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--muted);">No activities loaded.</div>';
     return;
@@ -1091,8 +1135,12 @@ function buildWorkoutHistory() {
       </div>`;
     container.appendChild(el);
   });
-  // Auto-select most recent
-  if (recent.length) APP.currentWorkout = recent[0];
+  // Auto-select most recent — fetch detail so laps are available
+  if (recent.length) {
+    const first = recent[0];
+    const firstEl = container.querySelector('.history-item');
+    if (firstEl) selectWorkout(first, firstEl);
+  }
 }
 
 async function selectWorkout(activity, el) {
@@ -1134,6 +1182,11 @@ function renderWorkoutBanner(a) {
   const hrMax = a.max_heartrate ? Math.round(a.max_heartrate) + ' bpm' : '—';
 
   document.getElementById('banner-title').textContent = a.name;
+  const stravaLink = document.getElementById('strava-banner-link');
+  if (stravaLink && a.id) {
+    stravaLink.href = `https://www.strava.com/activities/${a.id}`;
+    stravaLink.style.display = 'inline';
+  }
   document.getElementById('banner-stats').innerHTML = `
     <div class="wbs">Distance: <span>${mi} mi</span></div>
     <div class="wbs">Avg Pace: <span>${pace}/mi</span></div>
@@ -1425,6 +1478,56 @@ function renderWeeklySummary() {
         ['Avg HR', weekRuns.filter(a=>a.average_heartrate).length ? Math.round(weekRuns.filter(a=>a.average_heartrate).reduce((s,a)=>s+a.average_heartrate,0)/weekRuns.filter(a=>a.average_heartrate).length)+' bpm' : '—'],
       ].map(([l,v]) => `<div style="display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--muted);">${l}</span><span style="font-family:'DM Mono',monospace;font-size:11px;">${v}</span></div>`).join('')}
     </div>`;
+}
+
+// ── ACTIVITY EXCLUSION ──────────────────────────────────────
+function toggleActivityList() {
+  const body = document.getElementById('activity-list-body');
+  const toggle = document.getElementById('act-list-toggle');
+  const open = body.classList.toggle('open');
+  toggle.textContent = open ? '▲ HIDE' : '▼ SHOW';
+}
+
+function renderActivityList() {
+  const container = document.getElementById('activity-rows');
+  if (!container) return;
+  const weeks = parseInt(document.getElementById('est-window').value);
+  const cutoff = Date.now() - weeks * 7 * 86400000;
+  const shown = [...APP.activities]
+    .filter(a => new Date(a.start_date).getTime() > cutoff)
+    .sort((a,b) => new Date(b.start_date) - new Date(a.start_date));
+
+  container.innerHTML = '';
+  for (const act of shown) {
+    const excl = APP.excluded.has(act.id);
+    const mi = actToMi(act).toFixed(1);
+    const pace = fmtPace(actPaceMi(act));
+    const date = new Date(act.start_date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const row = document.createElement('div');
+    row.className = `activity-row${excl?' excluded':''}`;
+    row.innerHTML = `
+      <div class="act-name" title="${act.name}">${act.name}</div>
+      <div class="act-date">${date}</div>
+      <div class="act-dist">${mi} mi</div>
+      <div class="act-pace">${pace}/mi</div>
+      <button class="act-remove${excl?' restore':''}" onclick="toggleExclude(${act.id})" title="${excl?'Restore':'Exclude'}">${excl?'↩':'✕'}</button>`;
+    container.appendChild(row);
+  }
+  const excCount = APP.excluded.size;
+  const countEl = document.getElementById('excluded-count');
+  if (excCount > 0) {
+    countEl.textContent = `${excCount} activit${excCount===1?'y':'ies'} excluded from calculations`;
+    countEl.className = 'excluded-count visible';
+  } else {
+    countEl.className = 'excluded-count';
+  }
+}
+
+function toggleExclude(actId) {
+  if (APP.excluded.has(actId)) APP.excluded.delete(actId);
+  else APP.excluded.add(actId);
+  renderActivityList();
+  updateEstimates();
 }
 
 // ── UTILS ────────────────────────────────────────────────────
