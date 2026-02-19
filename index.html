@@ -281,7 +281,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="login-box fade-up">
     <div class="login-logo">RunIQ</div>
     <div class="login-sub">Athlete Portal</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.4</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.7</div>
     <button class="btn-strava" onclick="connectStrava()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       Connect with Strava
@@ -302,7 +302,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.2.4</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.2.7</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -905,21 +905,20 @@ function updateEstimates() {
 function estimateFromData(acts, weeks, method, avgMpw) {
   if (!avgMpw || avgMpw < 0.1) return null;
 
-  // Sort by most recent first, use runs >= 2 miles
-  const raceableRuns = [...acts]
-    .filter(a => actToMi(a) >= 2.0)
-    .sort((a,b) => new Date(b.start_date) - new Date(a.start_date));
+  // acts is already filtered to the selected window + excluded set
+  // Use all runs >= 2 miles in the window
+  const raceableRuns = acts.filter(a => actToMi(a) >= 2.0);
   if (!raceableRuns.length) return null;
 
-  // Average pace of most recent 5 runs (or all if fewer)
-  const recent = raceableRuns.slice(0, Math.min(5, raceableRuns.length));
-  const repPace = recent.reduce((s,a) => s + actPaceMi(a), 0) / recent.length;
+  // Weighted average pace — weight longer runs more heavily
+  const totalWeight = raceableRuns.reduce((s,a) => s + actToMi(a), 0);
+  const repPace = raceableRuns.reduce((s,a) => s + actPaceMi(a) * actToMi(a), 0) / totalWeight;
 
   // Longest run in window for Riegel scaling
   const maxDist = Math.max(...raceableRuns.map(actToMi));
 
   // Riegel formula: T2 = T1 * (D2/D1)^1.06
-  const pace10k = repPace * Math.pow(6.2137 / maxDist, 0.06);
+  const pace10k = repPace * Math.pow(6.2137 / Math.max(maxDist, 6.2137), 0.06);
   const t10k = pace10k * 6.2137;
   const thm  = pace10k * 13.1094 * Math.pow(13.1094/6.2137, 0.06);
   const tm   = pace10k * 26.2188 * Math.pow(26.2188/6.2137, 0.06);
