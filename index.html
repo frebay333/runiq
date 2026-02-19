@@ -257,6 +257,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="login-box fade-up">
     <div class="login-logo">RunIQ</div>
     <div class="login-sub">Athlete Portal</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.0</div>
     <button class="btn-strava" onclick="connectStrava()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       Connect with Strava
@@ -703,9 +704,12 @@ async function loadStravaData() {
     APP.athlete = await stravaGet('/athlete');
 
     // Activities — 16 weeks back
-    const since = Math.floor(Date.now()/1000) - (16 * 7 * 86400);
-    const acts = await stravaGet(`/athlete/activities?per_page=200&after=${since}`);
+    const acts = await stravaGet('/athlete/activities?per_page=200');
+    console.log('Strava returned', acts.length, 'activities');
+    console.log('First 3:', acts.slice(0,3).map(a => ({name:a.name, date:a.start_date, type:a.type, sport:a.sport_type})));
     APP.activities = acts.filter(a => a.type === 'Run' || a.sport_type === 'Run');
+    console.log('After Run filter:', APP.activities.length, 'runs');
+    console.log('Most recent:', APP.activities[0]?.start_date, APP.activities[0]?.name);
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -1075,7 +1079,10 @@ function buildWorkoutHistory() {
     el.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div class="hi-date">${dateLabel}</div>
-        ${i===0?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></div>':''}
+        <div style="display:flex;align-items:center;gap:5px;">
+          ${i===0?'<div style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></div>':''}
+          <a href="https://www.strava.com/activities/${a.id}" target="_blank" onclick="event.stopPropagation()" style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-decoration:none;padding:1px 5px;border:1px solid var(--border);border-radius:2px;transition:all .15s;" onmouseover="this.style.color='#fc4c02';this.style.borderColor='#fc4c02'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">↗</a>
+        </div>
       </div>
       <div class="hi-name">${a.name}</div>
       <div class="hi-stats">
@@ -1088,12 +1095,26 @@ function buildWorkoutHistory() {
   if (recent.length) APP.currentWorkout = recent[0];
 }
 
-function selectWorkout(activity, el) {
+async function selectWorkout(activity, el) {
   document.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
   const isFirstLoad = !APP.currentWorkout || !APP.chatInitialized;
-  APP.currentWorkout = activity;
-  renderWorkoutBanner(activity);
+
+  // Fetch detailed activity to get laps (list endpoint doesn't include them)
+  let detailed = activity;
+  if (!APP.demoMode && !activity.laps) {
+    try {
+      detailed = await stravaGet(`/activities/${activity.id}`);
+      // Cache it back into activities array
+      const idx = APP.activities.findIndex(a => a.id === activity.id);
+      if (idx >= 0) APP.activities[idx] = detailed;
+    } catch(e) {
+      detailed = activity; // fallback
+    }
+  }
+
+  APP.currentWorkout = detailed;
+  renderWorkoutBanner(detailed);
   document.getElementById('ping-btn').className = 'ping-btn';
   if (isFirstLoad) {
     APP.chatHistory = [];
@@ -1102,8 +1123,7 @@ function selectWorkout(activity, el) {
     document.getElementById('suggested-replies').innerHTML = '';
     initCoachChat();
   } else {
-    // Just update the banner context — don't restart the whole chat
-    addMsg('ai', `Switched to: ${activity.name} — ${actToMi(activity).toFixed(1)} mi @ ${fmtPace(actPaceMi(activity))}/mi. What do you want to dig into?`);
+    addMsg('ai', `Switched to: ${detailed.name} — ${actToMi(detailed).toFixed(1)} mi @ ${fmtPace(actPaceMi(detailed))}/mi. What do you want to dig into?`);
   }
 }
 
@@ -1261,7 +1281,7 @@ ${workoutDetail}
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
 
-Give a SHORT post-workout reaction — 2-3 sentences max, like a text from a coach. Reference 1-2 specific numbers. End with ONE question.`;
+Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No exclamation points. No fluff. Reference 1-2 specific numbers. End with ONE question.`;
 
   try {
     const res = await fetch('/api/claude', {
