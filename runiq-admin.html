@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RunIQ Admin — Coach Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;900&family=Barlow:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #05050a;
+  --s1: #0a0a12;
+  --s2: #10101a;
+  --s3: #181824;
+  --border: #1e1e2e;
+  --border2: #2a2a3e;
+  --accent: #e8ff47;
+  --red: #ff3d3d;
+  --orange: #ff9f43;
+  --green: #3dff8f;
+  --blue: #4da6ff;
+  --purple: #b46fff;
+  --text: #e8e8f0;
+  --muted: #52526e;
+  --muted2: #2e2e42;
+  --r: 3px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
+
+/* scanline effect */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);}
+
+/* ── TOP BAR ── */
+.topbar{
+  height:48px;background:rgba(5,5,10,.98);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 24px;gap:0;
+  position:sticky;top:0;z-index:100;
+}
+.topbar-logo{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:3px;color:var(--accent);margin-right:8px;}
+.topbar-badge{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:3px;padding:2px 8px;background:rgba(255,61,61,.1);border:1px solid rgba(255,61,61,.25);color:var(--red);text-transform:uppercase;margin-right:auto;}
+.topbar-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-right:20px;}
+.topbar-admin{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.admin-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 48px);}
+
+/* ── SIDEBAR ── */
+.sidebar{background:var(--s1);border-right:1px solid var(--border);padding-top:8px;}
+.sidebar-section{padding:16px 16px 8px;font-family:'DM Mono',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+.sidebar-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.sidebar-item:hover{color:var(--text);background:var(--s2);}
+.sidebar-item.active{color:var(--accent);background:var(--s2);border-right:2px solid var(--accent);}
+.sidebar-item .si-icon{font-size:14px;width:16px;text-align:center;}
+.sidebar-badge{margin-left:auto;font-family:'DM Mono',monospace;font-size:9px;padding:1px 6px;border-radius:8px;}
+.sidebar-badge.red{background:rgba(255,61,61,.15);color:var(--red);border:1px solid rgba(255,61,61,.3);}
+.sidebar-badge.neutral{background:var(--muted2);color:var(--muted);}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;padding:24px;}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);margin-bottom:20px;}
+.kpi{background:var(--s1);padding:18px 20px;}
+.kpi-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:700;line-height:1;}
+.kpi-delta{font-family:'DM Mono',monospace;font-size:9px;margin-top:5px;}
+.kpi-delta.up{color:var(--green);}
+.kpi-delta.down{color:var(--red);}
+.kpi-delta.neutral{color:var(--muted);}
+
+/* ── SECTION ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.section-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';width:40px;height:1px;background:var(--border2);}
+.section-action{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;padding:4px 10px;border:1px solid var(--border);border-radius:var(--r);transition:all .15s;}
+.section-action:hover{color:var(--text);border-color:var(--border2);}
+
+/* ── COACH TABLE ── */
+.coach-table{width:100%;border-collapse:collapse;margin-bottom:24px;}
+.coach-table thead tr{border-bottom:1px solid var(--border2);}
+.coach-table th{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;white-space:nowrap;}
+.coach-table th.right{text-align:right;}
+.coach-table td{padding:12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px;}
+.coach-table tr:hover td{background:var(--s2);}
+.coach-table tr.flagged td{background:rgba(255,61,61,.03);}
+
+.coach-name-cell{display:flex;align-items:center;gap:10px;}
+.coach-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;flex-shrink:0;}
+
+/* Login indicator */
+.login-pill{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;}
+.login-pill.today{background:rgba(61,255,143,.1);border:1px solid rgba(61,255,143,.2);color:var(--green);}
+.login-pill.recent{background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.15);color:var(--accent);}
+.login-pill.stale{background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.2);color:var(--orange);}
+.login-pill.danger{background:rgba(255,61,61,.1);border:1px solid rgba(255,61,61,.2);color:var(--red);}
+.login-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+
+/* Review completion bar */
+.review-bar-wrap{display:flex;align-items:center;gap:8px;}
+.review-bar{flex:1;height:5px;background:var(--muted2);border-radius:3px;overflow:hidden;min-width:80px;}
+.review-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.review-pct{font-family:'DM Mono',monospace;font-size:10px;min-width:32px;text-align:right;}
+
+/* Flag badge */
+.flag-badge{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:2px;}
+.flag-badge.ok{background:rgba(61,255,143,.08);color:var(--green);border:1px solid rgba(61,255,143,.15);}
+.flag-badge.warn{background:rgba(255,159,67,.08);color:var(--orange);border:1px solid rgba(255,159,67,.2);}
+.flag-badge.crit{background:rgba(255,61,61,.1);color:var(--red);border:1px solid rgba(255,61,61,.25);}
+
+/* revenue */
+.rev-cell{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:600;}
+
+/* ── ALERT FEED ── */
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+.alert-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 16px;
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+  border-left:3px solid transparent;
+}
+.alert-item.crit{border-left-color:var(--red);}
+.alert-item.warn{border-left-color:var(--orange);}
+.alert-item.info{border-left-color:var(--blue);}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.alert-body{flex:1;}
+.alert-title{font-size:12px;font-weight:500;margin-bottom:2px;}
+.alert-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.alert-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0;}
+.alert-action{font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);cursor:pointer;padding:4px 8px;border:1px solid rgba(232,255,71,.2);border-radius:2px;margin-top:6px;display:inline-block;transition:all .15s;}
+.alert-action:hover{background:rgba(232,255,71,.08);}
+
+/* ── CHARTS GRID ── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px;}
+.chart-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+
+/* Sparkline bars */
+.sparkline{display:flex;align-items:flex-end;gap:3px;height:60px;}
+.spark-bar{flex:1;border-radius:1px 1px 0 0;transition:height .4s ease;min-height:2px;cursor:pointer;}
+.spark-bar:hover{opacity:.8;}
+
+/* Mini donut placeholder */
+.donut-wrap{display:flex;align-items:center;gap:24px;}
+.donut{width:80px;height:80px;border-radius:50%;flex-shrink:0;}
+.donut-legend{display:flex;flex-direction:column;gap:6px;}
+.dl-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.dl-dot{width:8px;height:8px;border-radius:2px;}
+.dl-val{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto;}
+
+/* Revenue row */
+.revenue-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);margin-bottom:24px;}
+.rev-box{background:var(--s1);padding:20px;}
+.rev-label{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.rev-amount{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;line-height:1;}
+.rev-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;}
+.rev-delta{font-family:'DM Mono',monospace;font-size:10px;margin-top:6px;}
+
+/* modal */
+.drawer{
+  position:fixed;top:48px;right:0;bottom:0;width:440px;
+  background:var(--s1);border-left:1px solid var(--border);
+  transform:translateX(100%);transition:transform .3s ease;
+  z-index:200;overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0);}
+.drawer-header{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;letter-spacing:.5px;}
+.drawer-close{background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--muted);width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.drawer-close:hover{color:var(--text);border-color:var(--border2);}
+.drawer-body{padding:20px;flex:1;}
+.drawer-section{margin-bottom:20px;}
+.drawer-sec-title{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.metric-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.metric-row:last-child{border-bottom:none;}
+.metric-label{font-size:12px;color:var(--muted);}
+.metric-val{font-family:'DM Mono',monospace;font-size:12px;}
+
+.action-btn{width:100%;padding:11px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;border-radius:var(--r);cursor:pointer;transition:all .2s;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.action-warn{background:rgba(255,61,61,.1);color:var(--red);border:1px solid rgba(255,61,61,.3);}
+.action-warn:hover{background:rgba(255,61,61,.2);}
+.action-neutral{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.action-neutral:hover{color:var(--text);border-color:var(--border2);}
+.action-primary{background:var(--accent);color:#000;border:none;}
+.action-primary:hover{background:#f0ff6a;}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.fade-up{animation:fadeUp .3s ease both;}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">RunIQ</div>
+  <div class="topbar-badge">Admin · Operations</div>
+  <div class="topbar-time" id="live-time"></div>
+  <div class="topbar-admin"><div class="admin-dot"></div><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e081848d898ea092958e8991ce898f">[email&#160;protected]</a></div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Operations</div>
+    <div class="sidebar-item active"><span class="si-icon">📊</span>Coach Dashboard<span class="sidebar-badge red">3</span></div>
+    <div class="sidebar-item"><span class="si-icon">👥</span>Athletes<span class="sidebar-badge neutral">312</span></div>
+    <div class="sidebar-item"><span class="si-icon">🏃</span>Marketplace</div>
+    <div class="sidebar-item"><span class="si-icon">⚡</span>AI Activity</div>
+    <div class="sidebar-section">Finance</div>
+    <div class="sidebar-item"><span class="si-icon">💰</span>Revenue</div>
+    <div class="sidebar-item"><span class="si-icon">📤</span>Payouts</div>
+    <div class="sidebar-section">System</div>
+    <div class="sidebar-item"><span class="si-icon">🔑</span>Vetting Queue<span class="sidebar-badge red">5</span></div>
+    <div class="sidebar-item"><span class="si-icon">⚙️</span>Settings</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- KPI ROW -->
+    <div class="kpi-row fade-up">
+      <div class="kpi">
+        <div class="kpi-label">Active Coaches</div>
+        <div class="kpi-val">24</div>
+        <div class="kpi-delta up">+3 this month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Athletes</div>
+        <div class="kpi-val">312</div>
+        <div class="kpi-delta up">+28 this month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avg Review Rate</div>
+        <div class="kpi-val">78%</div>
+        <div class="kpi-delta down">↓ 4% vs last month</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Monthly Revenue</div>
+        <div class="kpi-val">$18.4k</div>
+        <div class="kpi-delta up">+12% MoM</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Coaches Flagged</div>
+        <div class="kpi-val" style="color:var(--red);">3</div>
+        <div class="kpi-delta down">Needs attention</div>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="section-header">
+      <div class="section-title">Active Alerts</div>
+      <div class="section-action">Mark all read</div>
+    </div>
+    <div class="alerts">
+      <div class="alert-item crit">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-body">
+          <div class="alert-title">Carlos Vega — No login in 11 days</div>
+          <div class="alert-sub">13 athletes unreviewed · Last active Feb 7 · Review rate dropped to 31%</div>
+          <div class="alert-action" onclick="openDrawer('carlos')">View Coach Profile →</div>
+        </div>
+        <div class="alert-time">11d ago</div>
+      </div>
+      <div class="alert-item crit">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-body">
+          <div class="alert-title">James Park — Weekly reviews: 2 of 8 athletes reviewed</div>
+          <div class="alert-sub">6 athletes received no human coach input this week · 3 are in race-specific block</div>
+          <div class="alert-action" onclick="openDrawer('james')">View Coach Profile →</div>
+        </div>
+        <div class="alert-time">2d ago</div>
+      </div>
+      <div class="alert-item warn">
+        <div class="alert-icon">👀</div>
+        <div class="alert-body">
+          <div class="alert-title">Nina Torres — Review rate trending down (84% → 67% → 58%)</div>
+          <div class="alert-sub">3-week decline · Was top performer in Q3 · Possible burnout indicator</div>
+          <div class="alert-action" onclick="openDrawer('nina')">View Coach Profile →</div>
+        </div>
+        <div class="alert-time">1d ago</div>
+      </div>
+      <div class="alert-item info">
+        <div class="alert-icon">🎉</div>
+        <div class="alert-body">
+          <div class="alert-title">Alicia Monroe — Perfect review week (12/12 athletes)</div>
+          <div class="alert-sub">4th consecutive perfect week · Athlete satisfaction avg 4.9 · Candidate for featured coach</div>
+        </div>
+        <div class="alert-time">Today</div>
+      </div>
+    </div>
+
+    <!-- REVENUE -->
+    <div class="section-header">
+      <div class="section-title">Revenue Snapshot</div>
+    </div>
+    <div class="revenue-row fade-up" style="animation-delay:.1s">
+      <div class="rev-box">
+        <div class="rev-label">Platform Revenue (MRR)</div>
+        <div class="rev-amount">$18,432</div>
+        <div class="rev-sub">312 athletes × avg $59/mo</div>
+        <div class="rev-delta" style="color:var(--green);">↑ $1,980 vs last month</div>
+      </div>
+      <div class="rev-box">
+        <div class="rev-label">Coach Payouts (30%)</div>
+        <div class="rev-amount" style="color:var(--orange);">$5,530</div>
+        <div class="rev-sub">Next payout: Mar 1</div>
+        <div class="rev-delta" style="color:var(--muted);">24 coaches · avg $230/coach</div>
+      </div>
+      <div class="rev-box">
+        <div class="rev-label">Net Revenue (70%)</div>
+        <div class="rev-amount" style="color:var(--accent);">$12,902</div>
+        <div class="rev-sub">After coach rev share</div>
+        <div class="rev-delta" style="color:var(--green);">↑ 12% MoM · On track for $220k ARR</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Weekly Review Completion — Last 8 Weeks</div>
+        <div class="sparkline" id="review-sparkline"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);">8w ago</div>
+          <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);">Now</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Coach Activity Distribution</div>
+        <div class="donut-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="30" fill="none" stroke="#1e1e2e" stroke-width="14"/>
+            <circle cx="40" cy="40" r="30" fill="none" stroke="#3dff8f" stroke-width="14"
+              stroke-dasharray="75 188.5" stroke-dashoffset="-47" transform="rotate(-90 40 40)"/>
+            <circle cx="40" cy="40" r="30" fill="none" stroke="#e8ff47" stroke-width="14"
+              stroke-dasharray="56 188.5" stroke-dashoffset="28" transform="rotate(-90 40 40)"/>
+            <circle cx="40" cy="40" r="30" fill="none" stroke="#ff9f43" stroke-width="14"
+              stroke-dasharray="38 188.5" stroke-dashoffset="84" transform="rotate(-90 40 40)"/>
+            <circle cx="40" cy="40" r="30" fill="none" stroke="#ff3d3d" stroke-width="14"
+              stroke-dasharray="19 188.5" stroke-dashoffset="122" transform="rotate(-90 40 40)"/>
+          </svg>
+          <div class="donut-legend">
+            <div class="dl-item"><div class="dl-dot" style="background:var(--green);"></div>Active today<span class="dl-val">10</span></div>
+            <div class="dl-item"><div class="dl-dot" style="background:var(--accent);"></div>This week<span class="dl-val">7</span></div>
+            <div class="dl-item"><div class="dl-dot" style="background:var(--orange);"></div>3–7 days<span class="dl-val">4</span></div>
+            <div class="dl-item"><div class="dl-dot" style="background:var(--red);"></div>7+ days<span class="dl-val">3</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COACH TABLE -->
+    <div class="section-header">
+      <div class="section-title">All Coaches</div>
+      <div style="display:flex;gap:8px;">
+        <div class="section-action">Export CSV</div>
+        <div class="section-action" style="color:var(--accent);border-color:rgba(232,255,71,.2);">+ Add Coach</div>
+      </div>
+    </div>
+    <table class="coach-table" id="coach-table">
+      <thead>
+        <tr>
+          <th>Coach</th>
+          <th>Athletes</th>
+          <th>Last Login</th>
+          <th>Review Rate</th>
+          <th>Reviews This Week</th>
+          <th class="right">Monthly Payout</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="coach-tbody"></tbody>
+    </table>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- COACH DRAWER -->
+<div class="drawer" id="coach-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawer-name">Coach Name</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// live clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-time').textContent =
+    now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' PST';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// data
+const COACHES = [
+  { id:'alicia', name:'Alicia Monroe', initials:'AM', color:'#c8401a',
+    athletes:12, lastLogin:'2h ago', loginStatus:'today',
+    reviewRate:100, reviewsDone:12, reviewsTotal:12,
+    payout:285, status:'ok', statusNote:'Top performer',
+    joinDate:'Jan 2024', totalAthletes:94, allTimeReviews:'99%',
+    satisfaction:4.9, revenue:950,
+  },
+  { id:'marcus', name:'Marcus Reid', initials:'MR', color:'#1a3cc8',
+    athletes:9, lastLogin:'Yesterday', loginStatus:'recent',
+    reviewRate:89, reviewsDone:8, reviewsTotal:9,
+    payout:198, status:'ok', statusNote:'On track',
+    joinDate:'Mar 2024', totalAthletes:62, allTimeReviews:'91%',
+    satisfaction:4.8, revenue:680,
+  },
+  { id:'yemi', name:'Dr. Yemi Okafor', initials:'YO', color:'#2d9c4e',
+    athletes:8, lastLogin:'3h ago', loginStatus:'today',
+    reviewRate:100, reviewsDone:8, reviewsTotal:8,
+    payout:248, status:'ok', statusNote:'Perfect week',
+    joinDate:'Feb 2024', totalAthletes:38, allTimeReviews:'97%',
+    satisfaction:5.0, revenue:712,
+  },
+  { id:'nina', name:'Nina Torres', initials:'NT', color:'#b46fff',
+    athletes:11, lastLogin:'2 days ago', loginStatus:'recent',
+    reviewRate:58, reviewsDone:6, reviewsTotal:11,
+    payout:176, status:'warn', statusNote:'Review rate declining',
+    joinDate:'Nov 2023', totalAthletes:71, allTimeReviews:'84%',
+    satisfaction:4.6, revenue:594,
+  },
+  { id:'james', name:'James Park', initials:'JP', color:'#ff9f43',
+    athletes:8, lastLogin:'4 days ago', loginStatus:'stale',
+    reviewRate:25, reviewsDone:2, reviewsTotal:8,
+    payout:140, status:'crit', statusNote:'6 athletes unreviewed',
+    joinDate:'Aug 2024', totalAthletes:29, allTimeReviews:'78%',
+    satisfaction:4.3, revenue:462,
+  },
+  { id:'carlos', name:'Carlos Vega', initials:'CV', color:'#b8960a',
+    athletes:13, lastLogin:'11 days ago', loginStatus:'danger',
+    reviewRate:31, reviewsDone:4, reviewsTotal:13,
+    payout:214, status:'crit', statusNote:'11 days inactive',
+    joinDate:'Oct 2023', totalAthletes:148, allTimeReviews:'82%',
+    satisfaction:4.7, revenue:715,
+  },
+  { id:'priya', name:'Priya Nair', initials:'PN', color:'#ff6b9d',
+    athletes:7, lastLogin:'Today', loginStatus:'today',
+    reviewRate:86, reviewsDone:6, reviewsTotal:7,
+    payout:161, status:'ok', statusNote:'On track',
+    joinDate:'Apr 2024', totalAthletes:21, allTimeReviews:'89%',
+    satisfaction:4.8, revenue:498,
+  },
+  { id:'thomas', name:'Thomas Wright', initials:'TW', color:'#4da6ff',
+    athletes:6, lastLogin:'3 days ago', loginStatus:'stale',
+    reviewRate:67, reviewsDone:4, reviewsTotal:6,
+    payout:120, status:'warn', statusNote:'Response time slow',
+    joinDate:'Jun 2024', totalAthletes:18, allTimeReviews:'80%',
+    satisfaction:4.5, revenue:374,
+  },
+];
+
+const SPARKLINE_DATA = [82, 85, 88, 84, 86, 81, 79, 78];
+
+function renderSparkline() {
+  const container = document.getElementById('review-sparkline');
+  const max = Math.max(...SPARKLINE_DATA);
+  SPARKLINE_DATA.forEach((v, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'spark-bar';
+    bar.style.height = `${(v/max)*100}%`;
+    bar.style.background = v >= 85 ? 'var(--green)' : v >= 75 ? 'var(--accent)' : v >= 65 ? 'var(--orange)' : 'var(--red)';
+    bar.title = `${v}%`;
+    container.appendChild(bar);
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('coach-tbody');
+  tbody.innerHTML = '';
+  COACHES.forEach(c => {
+    const barColor = c.reviewRate >= 85 ? 'var(--green)' : c.reviewRate >= 70 ? 'var(--accent)' : c.reviewRate >= 50 ? 'var(--orange)' : 'var(--red)';
+    const rateColor = c.reviewRate >= 85 ? 'var(--green)' : c.reviewRate >= 70 ? 'var(--accent)' : c.reviewRate >= 50 ? 'var(--orange)' : 'var(--red)';
+
+    const tr = document.createElement('tr');
+    if (c.status === 'crit') tr.classList.add('flagged');
+    tr.innerHTML = `
+      <td>
+        <div class="coach-name-cell">
+          <div class="coach-av" style="background:${c.color}22;border:1px solid ${c.color}44;color:${c.color};">${c.initials}</div>
+          <div>
+            <div style="font-size:13px;font-weight:400;">${c.name}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">Since ${c.joinDate}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;">${c.athletes}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">${c.totalAthletes} all-time</div>
+      </td>
+      <td>
+        <div class="login-pill ${c.loginStatus}">
+          <div class="login-dot" style="background:currentColor;"></div>
+          ${c.lastLogin}
+        </div>
+      </td>
+      <td>
+        <div class="review-bar-wrap">
+          <div class="review-bar">
+            <div class="review-bar-fill" style="width:${c.reviewRate}%;background:${barColor};"></div>
+          </div>
+          <div class="review-pct" style="color:${rateColor};">${c.reviewRate}%</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;">${c.allTimeReviews} all-time</div>
+      </td>
+      <td>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:${c.reviewsDone===c.reviewsTotal?'var(--green)':c.reviewsDone/c.reviewsTotal>.6?'var(--accent)':'var(--red)'};">${c.reviewsDone}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">/ ${c.reviewsTotal}</span>
+      </td>
+      <td style="text-align:right;">
+        <div class="rev-cell">$${c.payout}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">$${c.revenue} earned</div>
+      </td>
+      <td><span class="flag-badge ${c.status}">${c.statusNote}</span></td>
+      <td>
+        <button style="background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--muted);padding:5px 10px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;transition:all .15s;"
+          onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border2)'"
+          onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'"
+          onclick="openDrawer('${c.id}')">View →</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openDrawer(coachId) {
+  const c = COACHES.find(c => c.id === coachId);
+  if (!c) return;
+
+  document.getElementById('drawer-name').textContent = c.name;
+
+  const barColor = c.reviewRate >= 85 ? 'var(--green)' : c.reviewRate >= 70 ? 'var(--accent)' : c.reviewRate >= 50 ? 'var(--orange)' : 'var(--red)';
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="drawer-section">
+      <div class="drawer-sec-title">Engagement Metrics</div>
+      <div class="metric-row"><div class="metric-label">Last Login</div><div class="metric-val" style="color:${c.loginStatus==='today'?'var(--green)':c.loginStatus==='recent'?'var(--accent)':c.loginStatus==='stale'?'var(--orange)':'var(--red)'};">${c.lastLogin}</div></div>
+      <div class="metric-row"><div class="metric-label">Review Rate (this week)</div><div class="metric-val" style="color:${barColor};">${c.reviewsDone} / ${c.reviewsTotal} athletes</div></div>
+      <div class="metric-row"><div class="metric-label">All-Time Review Rate</div><div class="metric-val">${c.allTimeReviews}</div></div>
+      <div class="metric-row"><div class="metric-label">Athlete Satisfaction</div><div class="metric-val">⭐ ${c.satisfaction}</div></div>
+      <div class="metric-row"><div class="metric-label">Active Athletes</div><div class="metric-val">${c.athletes}</div></div>
+      <div class="metric-row"><div class="metric-label">Total Athletes (all-time)</div><div class="metric-val">${c.totalAthletes}</div></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-sec-title">Revenue</div>
+      <div class="metric-row"><div class="metric-label">This Month Earned</div><div class="metric-val" style="color:var(--accent);">$${c.revenue}</div></div>
+      <div class="metric-row"><div class="metric-label">Coach Payout (30%)</div><div class="metric-val" style="color:var(--orange);">$${c.payout}</div></div>
+      <div class="metric-row"><div class="metric-label">Platform Net</div><div class="metric-val">$${c.revenue - c.payout}</div></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-sec-title">Review Completion — Last 4 Weeks</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:50px;margin-bottom:6px;">
+        ${[c.allTimeReviews, Math.max(20,c.reviewRate+12)+'%', Math.max(20,c.reviewRate+6)+'%', c.reviewRate+'%'].map((v,i) => {
+          const pct = parseInt(v);
+          const bc = pct >= 85 ? 'var(--green)' : pct >= 70 ? 'var(--accent)' : pct >= 50 ? 'var(--orange)' : 'var(--red)';
+          return `<div style="flex:1;height:${Math.round(pct*.5)}px;background:${bc};border-radius:1px 1px 0 0;" title="${v}"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        ${['4w ago','3w ago','2w ago','This week'].map(l=>`<div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);">${l}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-sec-title">Actions</div>
+      ${c.status === 'crit' ? `
+        <button class="action-btn action-warn" onclick="sendWarning('${c.id}')">⚠️ Send Engagement Warning</button>
+        <button class="action-btn action-warn" onclick="">🔒 Pause New Athlete Intake</button>
+      ` : c.status === 'warn' ? `
+        <button class="action-btn action-warn" onclick="">👀 Flag for Review</button>
+      ` : `
+        <button class="action-btn action-primary" onclick="">⭐ Feature on Marketplace</button>
+      `}
+      <button class="action-btn action-neutral" onclick="">📧 Message Coach</button>
+      <button class="action-btn action-neutral" onclick="">📋 View Full Activity Log</button>
+    </div>
+  `;
+
+  document.getElementById('coach-drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('coach-drawer').classList.remove('open');
+}
+
+function sendWarning(id) {
+  alert(`Warning sent to ${COACHES.find(c=>c.id===id)?.name}. They will receive an email and in-app notification.`);
+}
+
+// close drawer on outside click
+document.addEventListener('click', 

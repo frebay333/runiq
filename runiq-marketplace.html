@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RunIQ — Find Your Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,700;0,900;1,700&family=Barlow:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ee;
+  --bg2: #ede9e1;
+  --ink: #0e0d0b;
+  --ink2: #3a3830;
+  --muted: #8a8478;
+  --muted2: #c4bfb4;
+  --accent: #c8401a;
+  --accent2: #1a3cc8;
+  --gold: #b8960a;
+  --border: #d8d2c8;
+  --white: #fdfcfa;
+  --r: 2px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--ink); font-family:'Barlow',sans-serif; font-weight:300; }
+
+/* ── NAV ── */
+nav {
+  background:var(--ink);
+  padding:0 48px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  gap:0;
+  position:sticky; top:0; z-index:100;
+}
+.nav-logo { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; letter-spacing:3px; color:#e8ff47; margin-right:40px; }
+.nav-links { display:flex; gap:0; flex:1; }
+.nav-link { padding:0 18px; height:52px; display:flex; align-items:center; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#666; cursor:pointer; transition:color .2s; border-right:1px solid #1e1e1e; }
+.nav-link:first-child { border-left:1px solid #1e1e1e; }
+.nav-link:hover { color:#fff; }
+.nav-link.active { color:#e8ff47; }
+.nav-cta { margin-left:auto; background:#e8ff47; color:#000; border:none; padding:8px 20px; font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; font-weight:500; cursor:pointer; text-transform:uppercase; transition:all .2s; }
+.nav-cta:hover { background:#f5ff80; }
+
+/* ── HERO ── */
+.hero {
+  background:var(--ink);
+  padding:72px 48px 60px;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before {
+  content:'COACHES';
+  position:absolute;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:260px;
+  font-weight:900;
+  color:rgba(255,255,255,.03);
+  letter-spacing:-8px;
+  top:-20px; right:-20px;
+  line-height:1;
+  pointer-events:none;
+  user-select:none;
+}
+.hero-eyebrow { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:4px; text-transform:uppercase; color:#666; margin-bottom:16px; }
+.hero-title { font-family:'Barlow Condensed',sans-serif; font-size:80px; font-weight:900; letter-spacing:-1px; line-height:.95; color:#f5f3ee; text-transform:uppercase; margin-bottom:24px; }
+.hero-title em { color:#e8ff47; font-style:italic; }
+.hero-sub { font-size:16px; color:#888; max-width:520px; line-height:1.7; margin-bottom:36px; }
+.hero-stats { display:flex; gap:40px; }
+.hs { }
+.hs-val { font-family:'Barlow Condensed',sans-serif; font-size:42px; font-weight:700; color:#f5f3ee; line-height:1; }
+.hs-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#555; margin-top:4px; }
+
+/* ── FILTERS ── */
+.filters-bar {
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+  padding:16px 48px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  position:sticky; top:52px; z-index:90;
+}
+.filter-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-right:4px; }
+.filter-chip {
+  padding:6px 14px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:1px;
+  color:var(--ink2);
+  cursor:pointer;
+  transition:all .15s;
+  background:transparent;
+  text-transform:uppercase;
+}
+.filter-chip:hover { border-color:var(--ink); color:var(--ink); }
+.filter-chip.active { background:var(--ink); color:#e8ff47; border-color:var(--ink); }
+.filter-divider { width:1px; height:20px; background:var(--border); margin:0 4px; }
+.sort-select {
+  margin-left:auto;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:2px;
+  padding:6px 28px 6px 10px;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  color:var(--ink2);
+  cursor:pointer;
+  outline:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8478' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 8px center;
+}
+
+/* ── ROSTER GRID ── */
+.roster-grid {
+  padding:40px 48px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));
+  gap:1px;
+  background:var(--border);
+}
+
+/* ── COACH CARD ── */
+.coach-card {
+  background:var(--white);
+  padding:32px;
+  cursor:pointer;
+  transition:background .15s;
+  position:relative;
+  overflow:hidden;
+}
+.coach-card:hover { background:var(--bg2); }
+.coach-card:hover .card-cta { opacity:1; transform:translateY(0); }
+
+.cc-top { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; }
+.cc-photo {
+  width:72px; height:72px;
+  border-radius:2px;
+  object-fit:cover;
+  background:var(--bg2);
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px;
+  font-weight:700;
+  font-family:'Barlow Condensed',sans-serif;
+  color:var(--white);
+  letter-spacing:1px;
+}
+.cc-info { flex:1; }
+.cc-name { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:700; letter-spacing:.5px; line-height:1; margin-bottom:4px; }
+.cc-location { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.cc-cred-row { display:flex; flex-wrap:wrap; gap:4px; }
+.cc-cred {
+  font-family:'DM Mono',monospace;
+  font-size:8px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:3px 8px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:1px;
+  color:var(--ink2);
+}
+.cc-cred.featured { background:var(--ink); color:#e8ff47; border-color:var(--ink); }
+
+.cc-bio { font-size:13px; color:var(--ink2); line-height:1.65; margin-bottom:20px; }
+
+.cc-methods { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+.cc-method {
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:1px;
+  padding:4px 10px;
+  border:1px solid var(--border);
+  border-radius:1px;
+  color:var(--muted);
+}
+
+.cc-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0; border:1px solid var(--border); margin-bottom:20px; }
+.cc-stat { padding:10px 12px; border-right:1px solid var(--border); }
+.cc-stat:last-child { border-right:none; }
+.cc-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:700; line-height:1; }
+.cc-stat-lbl { font-family:'DM Mono',monospace; font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-top:3px; }
+
+.cc-rating { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+.stars { color:var(--gold); font-size:13px; letter-spacing:1px; }
+.rating-val { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:700; }
+.rating-count { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); }
+
+.cc-availability {
+  display:flex; align-items:center; gap:8px;
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:20px;
+}
+.avail-dot { width:7px; height:7px; border-radius:50%; }
+.avail-dot.open { background:#2d9c4e; }
+.avail-dot.limited { background:#c8850a; }
+.avail-dot.full { background:#c41a1a; }
+
+.card-cta {
+  width:100%;
+  background:var(--ink);
+  color:#e8ff47;
+  border:none;
+  padding:12px;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+  opacity:0;
+  transform:translateY(4px);
+}
+.card-cta:hover { background:#1a1a1a; }
+
+/* ── PROFILE MODAL ── */
+.modal-overlay {
+  display:none;
+  position:fixed; inset:0; z-index:200;
+  background:rgba(14,13,11,.7);
+  backdrop-filter:blur(8px);
+  overflow-y:auto;
+  padding:40px 20px;
+}
+.modal-overlay.open { display:flex; align-items:flex-start; justify-content:center; }
+.modal {
+  background:var(--white);
+  width:100%; max-width:820px;
+  position:relative;
+  animation:modalIn .3s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;} }
+.modal-close {
+  position:absolute; top:20px; right:20px;
+  width:36px; height:36px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:2px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; cursor:pointer; color:var(--muted);
+  transition:all .15s; z-index:10;
+}
+.modal-close:hover { background:var(--ink); color:#fff; border-color:var(--ink); }
+
+.modal-hero {
+  background:var(--ink);
+  padding:40px;
+  display:flex;
+  gap:32px;
+  align-items:flex-start;
+}
+.modal-photo {
+  width:120px; height:120px;
+  border-radius:2px;
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:48px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:2px;
+}
+.modal-name { font-family:'Barlow Condensed',sans-serif; font-size:52px; font-weight:900; color:#f5f3ee; letter-spacing:-1px; line-height:1; margin-bottom:4px; text-transform:uppercase; }
+.modal-location { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:#555; margin-bottom:12px; }
+.modal-creds { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.modal-cred {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1px; text-transform:uppercase;
+  padding:4px 10px; border:1px solid #333; color:#aaa; border-radius:1px;
+}
+.modal-cred.featured { background:#e8ff47; color:#000; border-color:#e8ff47; }
+.modal-rating-big { display:flex; align-items:baseline; gap:8px; }
+.modal-rating-num { font-family:'Barlow Condensed',sans-serif; font-size:56px; font-weight:900; color:#e8ff47; line-height:1; }
+.modal-rating-stars { color:var(--gold); font-size:18px; letter-spacing:2px; }
+.modal-rating-sub { font-family:'DM Mono',monospace; font-size:10px; color:#555; }
+
+.modal-body { padding:40px; }
+.modal-section-title {
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:14px;
+  display:flex; align-items:center; gap:10px;
+}
+.modal-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+.modal-bio { font-size:14px; line-height:1.75; color:var(--ink2); margin-bottom:32px; }
+
+.modal-pr-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border); margin-bottom:32px; }
+.modal-pr { background:var(--bg2); padding:16px; text-align:center; }
+.modal-pr-dist { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.modal-pr-time { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:700; }
+.modal-pr-label { font-size:10px; color:var(--muted); margin-top:2px; }
+
+.modal-stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border); margin-bottom:32px; }
+.modal-stat { background:var(--white); padding:20px; }
+.modal-stat-val { font-family:'Barlow Condensed',sans-serif; font-size:36px; font-weight:700; line-height:1; margin-bottom:4px; }
+.modal-stat-lbl { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+
+.reviews-list { display:flex; flex-direction:column; gap:16px; margin-bottom:32px; }
+.review {
+  padding:20px;
+  background:var(--bg);
+  border-left:3px solid var(--border);
+}
+.review.featured-review { border-left-color:var(--accent); }
+.review-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.review-avatar { width:32px; height:32px; border-radius:50%; background:var(--bg2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; font-family:'Barlow Condensed',sans-serif; }
+.review-name { font-size:13px; font-weight:500; }
+.review-meta { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); margin-top:2px; }
+.review-stars { margin-left:auto; color:var(--gold); font-size:11px; }
+.review-text { font-size:13px; line-height:1.65; color:var(--ink2); }
+.review-pr { margin-top:8px; font-family:'DM Mono',monospace; font-size:10px; color:var(--accent2); }
+
+.modal-apply {
+  background:var(--ink);
+  padding:32px 40px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+}
+.apply-info {}
+.apply-title { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:700; color:#f5f3ee; letter-spacing:.5px; margin-bottom:4px; }
+.apply-sub { font-size:13px; color:#666; }
+.apply-price { font-family:'Barlow Condensed',sans-serif; font-size:42px; font-weight:900; color:#e8ff47; line-height:1; }
+.apply-price-sub { font-family:'DM Mono',monospace; font-size:9px; color:#555; letter-spacing:1px; margin-top:2px; }
+.apply-btn { background:#e8ff47; color:#000; border:none; padding:16px 40px; font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; font-weight:500; text-transform:uppercase; cursor:pointer; transition:all .2s; white-space:nowrap; }
+.apply-btn:hover { background:#f5ff80; }
+
+/* animations */
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;} }
+.fade-up { animation:fadeUp .4s ease both; }
+.coach-card { animation:fadeUp .4s ease both; }
+
+@media(max-width:768px){
+  .hero { padding:40px 24px; }
+  .hero-title { font-size:52px; }
+  .roster-grid { padding:0; grid-template-columns:1fr; }
+  .filters-bar { padding:12px 24px; }
+  .modal-hero { flex-direction:column; gap:20px; padding:24px; }
+  .modal-body { padding:24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">RunIQ</div>
+  <div class="nav-links">
+    <div class="nav-link">Dashboard</div>
+    <div class="nav-link active">Find Coach</div>
+    <div class="nav-link">My Plan</div>
+    <div class="nav-link">Race Estimator</div>
+  </div>
+  <button class="nav-cta">My Account</button>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">RunIQ Coach Marketplace</div>
+  <div class="hero-title">Find Your<br><em>Head Coach</em></div>
+  <div class="hero-sub">Every RunIQ coach is vetted, credentialed, and earns a revenue share. Your AI handles daily coaching — your human coach sets the strategy and reviews your week.</div>
+  <div class="hero-stats">
+    <div class="hs"><div class="hs-val">24</div><div class="hs-lbl">Vetted Coaches</div></div>
+    <div class="hs"><div class="hs-val">4.9</div><div class="hs-lbl">Avg Rating</div></div>
+    <div class="hs"><div class="hs-val">312</div><div class="hs-lbl">Athletes Coached</div></div>
+    <div class="hs"><div class="hs-val">89%</div><div class="hs-lbl">PR Rate</div></div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <span class="filter-label">Method:</span>
+  <button class="filter-chip active" onclick="toggleFilter(this,'all')">All</button>
+  <button class="filter-chip" onclick="toggleFilter(this,'pfitz')">Pfitzinger</button>
+  <button class="filter-chip" onclick="toggleFilter(this,'hansons')">Hansons</button>
+  <button class="filter-chip" onclick="toggleFilter(this,'daniels')">Jack Daniels</button>
+  <button class="filter-chip" onclick="toggleFilter(this,'canova')">Canova</button>
+  <div class="filter-divider"></div>
+  <span class="filter-label">Available:</span>
+  <button class="filter-chip" onclick="toggleFilter(this,'open')">Open</button>
+  <select class="sort-select">
+    <option>Sort: Top Rated</option>
+    <option>Sort: Most Athletes</option>
+    <option>Sort: Price: Low</option>
+  </select>
+</div>
+
+<!-- COACH GRID -->
+<div class="roster-grid" id="coach-grid"></div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <div class="modal-close" onclick="closeModal()">✕</div>
+
+    <div class="modal-hero">
+      <div id="m-photo" class="modal-photo"></div>
+      <div style="flex:1">
+        <div id="m-name" class="modal-name"></div>
+        <div id="m-location" class="modal-location"></div>
+        <div id="m-creds" class="modal-creds"></div>
+        <div class="modal-rating-big">
+          <div id="m-rating-num" class="modal-rating-num"></div>
+          <div>
+            <div id="m-stars" class="modal-rating-stars"></div>
+            <div id="m-rating-sub" class="modal-rating-sub"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-section-title">About</div>
+      <div id="m-bio" class="modal-bio"></div>
+
+      <div class="modal-section-title">Athlete PRs Achieved</div>
+      <div id="m-prs" class="modal-pr-grid"></div>
+
+      <div class="modal-section-title">By the Numbers</div>
+      <div id="m-stats" class="modal-stats-row"></div>
+
+      <div class="modal-section-title">Athlete Reviews</div>
+      <div id="m-reviews" class="reviews-list"></div>
+    </div>
+
+    <div class="modal-apply">
+      <div class="apply-info">
+        <div class="apply-title">Work with this coach</div>
+        <div class="apply-sub">AI handles daily coaching · Head coach reviews weekly</div>
+      </div>
+      <div style="text-align:right">
+        <div id="m-price" class="apply-price"></div>
+        <div class="apply-price-sub">/ month · cancel anytime</div>
+      </div>
+      <button class="apply-btn">Apply to Roster →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COACHES = [
+  {
+    id:1,
+    name:'Alicia Monroe',
+    initials:'AM',
+    color:'#c8401a',
+    location:'Boulder, CO',
+    availability:'open',
+    price:79,
+    rating:4.9,
+    reviewCount:47,
+    methods:['Pfitzinger','Jack Daniels'],
+    credentials:['USATF Level 2','Sub-2:40 Marathoner','10 yrs coaching'],
+    featuredCred:'USATF Level 2',
+    bio:'Former NCAA All-American turned full-time coach. I specialize in taking athletes from their first marathon to chasing BQ. My approach is data-driven but always athlete-first — I read your logs every week and I\'m never more than a message away.',
+    fullBio:'Former NCAA All-American at University of Colorado. Ran 2:38 marathon at 2018 Chicago. Transitioned to coaching in 2019 after a hamstring injury. I\'ve since guided 47 athletes to PRs, including 12 BQ qualifications. My background in exercise physiology means I explain the why behind every session — athletes who understand the purpose train smarter. I specialize in the Pfitzinger methodology for mileage-first athletes and blend in Jack Daniels\' VDOT system for pace prescription.',
+    athleteCount:94,
+    prRate:'91%',
+    avgImprovement:'18 min',
+    prs:[ {dist:'5K', time:'17:42', note:'↓ 3:12 avg'}, {dist:'10K', time:'36:55', note:'↓ 5:40 avg'}, {dist:'HM', time:'1:19:04', note:'↓ 9:22 avg'}, {dist:'M', time:'2:54:38', note:'↓ 18:15 avg'} ],
+    stats:[ {val:'94', lbl:'Athletes Coached'}, {val:'91%', lbl:'PR Rate'}, {val:'18 min', lbl:'Avg Marathon Improvement'} ],
+    reviews:[
+      { name:'Jordan K.', avatar:'JK', meta:'Marathon runner · 8 months with Alicia', stars:5, text:'Alicia completely transformed how I approach training. I went from 4:12 to 3:44 in one training cycle. What sets her apart is the weekly review — she actually watches my HR data and adjusts the plan mid-week when she sees I\'m accumulating fatigue.', pr:'Marathon: 4:12 → 3:44', featured:true },
+      { name:'Priya S.', avatar:'PS', meta:'Half Marathon runner · 5 months', stars:5, text:'The AI coach is amazing for day-to-day stuff, but Alicia\'s weekly notes are what I look forward to most. She has a way of explaining what\'s happening physiologically that makes you trust the process even when the workouts are brutally hard.' },
+      { name:'David T.', avatar:'DT', meta:'BQ qualifier · 11 months', stars:5, text:'Qualified for Boston after 3 failed attempts with other programs. The Pfitzinger methodology is no joke but Alicia keeps you honest on the easy days, which is where most people blow it.', pr:'BQ by 4 minutes' },
+    ]
+  },
+  {
+    id:2,
+    name:'Marcus Reid',
+    initials:'MR',
+    color:'#1a3cc8',
+    location:'Portland, OR',
+    availability:'limited',
+    price:65,
+    rating:4.8,
+    reviewCount:31,
+    methods:['Hansons','Canova'],
+    credentials:['RRCA Certified','Sub-2:20 qualifier','Hansons Method certified'],
+    featuredCred:'Hansons Certified',
+    bio:'I coach runners who want to compete, not just finish. The Hansons method\'s cumulative fatigue approach isn\'t for everyone — but for the right athlete, it\'s transformative. I\'ve worked with everyone from 4-hour first-timers to sub-3 veterans.',
+    fullBio:'I discovered the Hansons method while trying to crack 2:30 myself. It changed everything — my marathon went from 2:38 to 2:24. I became certified through the Hansons-Brooks Distance Project and have coached over 60 athletes using this method. My specialty is the "SOS" (Something of Substance) sessions — threshold runs, speed, and long runs structured to simulate late-race fatigue. I\'ve recently incorporated Canova\'s specificity principles for athletes targeting sub-3:00.',
+    athleteCount:62,
+    prRate:'87%',
+    avgImprovement:'22 min',
+    prs:[ {dist:'5K', time:'16:28', note:'↓ 4:01 avg'}, {dist:'10K', time:'34:12', note:'↓ 6:10 avg'}, {dist:'HM', time:'1:16:44', note:'↓ 11:08 avg'}, {dist:'M', time:'2:44:55', note:'↓ 22:18 avg'} ],
+    stats:[ {val:'62', lbl:'Athletes Coached'}, {val:'87%', lbl:'PR Rate'}, {val:'22 min', lbl:'Avg Marathon Improvement'} ],
+    reviews:[
+      { name:'Sam W.', avatar:'SW', meta:'Sub-3 pursuer · 14 months', stars:5, text:'Marcus held me back for 6 weeks when I wanted to push harder. I was furious. Then I ran 2:58 at Boston. He was right about everything. The Hansons tired-legs approach is real — you learn to push when you have nothing left.', pr:'Marathon: 3:19 → 2:58', featured:true },
+      { name:'Lin C.', avatar:'LC', meta:'First marathon · 6 months', stars:4, text:'Fair warning: Hansons is hard. My first 6 weeks I questioned everything. But Marcus was available to explain every session and the AI did a great job keeping me accountable between his weekly reviews. Ran 3:42 first marathon.' },
+    ]
+  },
+  {
+    id:3,
+    name:'Dr. Yemi Okafor',
+    initials:'YO',
+    color:'#2d9c4e',
+    location:'Atlanta, GA',
+    availability:'open',
+    price:89,
+    rating:5.0,
+    reviewCount:22,
+    methods:['Jack Daniels','Pfitzinger'],
+    credentials:['PhD Exercise Science','USATF Level 3','Olympic Trials qualifier'],
+    featuredCred:'PhD Exercise Science',
+    bio:'Exercise physiologist and Olympic Trials qualifier. I combine peer-reviewed sports science with real-world competitive experience. Every session I prescribe has a physiological rationale — and I\'ll explain it to you in plain English.',
+    fullBio:'I hold a PhD in Exercise Physiology from Georgia Tech and qualified for the 2020 US Olympic Marathon Trials with a 2:19. My coaching philosophy is built on one principle: understand the mechanism, trust the process. I teach my athletes why Zone 2 matters, what lactate threshold actually means, and how to read their own biometric data. The AI coach delivers this framework daily — I review weekly and add the high-level physiological context that turns good training into exceptional performance.',
+    athleteCount:38,
+    prRate:'95%',
+    avgImprovement:'24 min',
+    prs:[ {dist:'5K', time:'15:55', note:'↓ 3:44 avg'}, {dist:'10K', time:'33:08', note:'↓ 5:55 avg'}, {dist:'HM', time:'1:14:22', note:'↓ 12:04 avg'}, {dist:'M', time:'2:39:18', note:'↓ 24:40 avg'} ],
+    stats:[ {val:'38', lbl:'Athletes Coached'}, {val:'95%', lbl:'PR Rate'}, {val:'24 min', lbl:'Avg Marathon Improvement'} ],
+    reviews:[
+      { name:'Rachel M.', avatar:'RM', meta:'Competitive age grouper · 10 months', stars:5, text:'Yemi is in a different league. She explained my cardiac drift data in a way that completely changed how I approach easy runs. The AI handles my daily check-ins perfectly, but her weekly physiological breakdowns are worth every penny.', pr:'HM: 1:34 → 1:21', featured:true },
+      { name:'Tom B.', avatar:'TB', meta:'BQ qualifier · 8 months', stars:5, text:'I\'ve worked with 3 coaches before Yemi. None of them could explain why the training works — they just said trust me. Yemi explains everything at a scientific level and it makes you buy in 100%.', pr:'Marathon: 3:28 → 3:04' },
+    ]
+  },
+  {
+    id:4,
+    name:'Carlos Vega',
+    initials:'CV',
+    color:'#b8960a',
+    location:'Tucson, AZ',
+    availability:'full',
+    price:55,
+    rating:4.7,
+    reviewCount:58,
+    methods:['Canova','Hansons'],
+    credentials:['RRCA Certified','Former D1 coach','15 yrs experience'],
+    featuredCred:'D1 Experience',
+    bio:'15 years coaching at the college and masters level. Canova\'s race-specificity model is my foundation. I\'ve seen every type of runner and every type of plateau — and I know how to break through them. No fluff, just work.',
+    fullBio:'Spent 8 years as an assistant coach at University of Arizona before transitioning to private coaching. My specialty is the masters runner — athletes 40+ who want to compete seriously. Canova\'s specificity approach works especially well for this group because it maximizes return per training hour. I currently have a waitlist but openings rotate monthly.',
+    athleteCount:148,
+    prRate:'84%',
+    avgImprovement:'16 min',
+    prs:[ {dist:'5K', time:'17:55', note:'↓ 2:50 avg'}, {dist:'10K', time:'37:22', note:'↓ 4:40 avg'}, {dist:'HM', time:'1:21:08', note:'↓ 8:20 avg'}, {dist:'M', time:'2:58:44', note:'↓ 16:12 avg'} ],
+    stats:[ {val:'148', lbl:'Athletes Coached'}, {val:'84%', lbl:'PR Rate'}, {val:'16 min', lbl:'Avg Marathon Improvement'} ],
+    reviews:[
+      { name:'Mike H.', avatar:'MH', meta:'Masters runner (47) · 18 months', stars:5, text:'Carlos gets masters runners in a way no one else does. He adjusted my recovery windows without me even asking — he saw the HR data and knew. Down 22 minutes at Boston this year at age 47.', pr:'Boston: 3:48 → 3:26', featured:true },
+      { name:'Ana R.', avatar:'AR', meta:'HM specialist · 7 months', stars:4, text:'Carlos is on the waitlist for a reason. Direct, no-nonsense, and his Canova-based specificity sessions are the hardest thing I\'ve ever done. Worth it.' },
+    ]
+  },
+];
+
+let activeCoach = null;
+
+function renderGrid() {
+  const grid = document.getElementById('coach-grid');
+  grid.innerHTML = '';
+  COACHES.forEach((c, i) => {
+    const avColors = { open:'#2d9c4e', limited:'#c8850a', full:'#c41a1a' };
+    const avLabels = { open:'Accepting Athletes', limited:'Limited Spots', full:'Waitlist Only' };
+    const stars = '★'.repeat(Math.floor(c.rating)) + (c.rating%1>=.5?'½':'');
+
+    const card = document.createElement('div');
+    card.className = 'coach-card';
+    card.style.animationDelay = `${i*0.08}s`;
+    card.onclick = () => openModal(c);
+    card.innerHTML = `
+      <div class="cc-top">
+        <div class="cc-photo" style="background:${c.color};">${c.initials}</div>
+        <div class="cc-info">
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-location">${c.location}</div>
+          <div class="cc-cred-row">
+            <span class="cc-cred featured">${c.featuredCred}</span>
+            ${c.credentials.filter(cr=>cr!==c.featuredCred).slice(0,1).map(cr=>`<span class="cc-cred">${cr}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="cc-bio">${c.bio}</div>
+      <div class="cc-methods">${c.methods.map(m=>`<span class="cc-method">${m}</span>`).join('')}</div>
+      <div class="cc-stats">
+        <div class="cc-stat"><div class="cc-stat-val">${c.athleteCount}</div><div class="cc-stat-lbl">Coached</div></div>
+        <div class="cc-stat"><div class="cc-stat-val">${c.prRate}</div><div class="cc-stat-lbl">PR Rate</div></div>
+        <div class="cc-stat"><div class="cc-stat-val">↓${c.avgImprovement}</div><div class="cc-stat-lbl">Avg Improv</div></div>
+      </div>
+      <div class="cc-rating">
+        <span class="stars">${'★'.repeat(Math.floor(c.rating))}</span>
+        <span class="rating-val">${c.rating}</span>
+        <span class="rating-count">(${c.reviewCount} reviews)</span>
+      </div>
+      <div class="cc-availability">
+        <div class="avail-dot ${c.availability}"></div>
+        ${avLabels[c.availability]}
+        <span style="margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--ink);">$${c.price}<span style="font-size:12px;font-family:'DM Mono',monospace;font-weight:300;color:var(--muted);">/mo</span></span>
+      </div>
+      <button class="card-cta">View Profile & Apply →</button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function openModal(c) {
+  activeCoach = c;
+  const avColors = { open:'#2d9c4e', limited:'#c8850a', full:'#c41a1a' };
+
+  document.getElementById('m-photo').textContent = c.initials;
+  document.getElementById('m-photo').style.background = c.color;
+  document.getElementById('m-name').textContent = c.name.toUpperCase();
+  document.getElementById('m-location').textContent = c.location + ' · ' + c.methods.join(', ');
+  document.getElementById('m-rating-num').textContent = c.rating;
+  document.getElementById('m-stars').textContent = '★'.repeat(Math.floor(c.rating)) + (c.rating%1>=.5?'½':'');
+  document.getElementById('m-rating-sub').textContent = `${c.reviewCount} athlete reviews`;
+  document.getElementById('m-bio').textContent = c.fullBio;
+  document.getElementById('m-price').textContent = `$${c.price}`;
+
+  // Creds
+  document.getElementById('m-creds').innerHTML = c.credentials.map(cr =>
+    `<span class="modal-cred${cr===c.featuredCred?' featured':''}">${cr}</span>`
+  ).join('');
+
+  // PRs
+  document.getElementById('m-prs').innerHTML = c.prs.map(pr => `
+    <div class="modal-pr">
+      <div class="modal-pr-dist">${pr.dist}</div>
+      <div class="modal-pr-time">${pr.time}</div>
+      <div class="modal-pr-label">${pr.note}</div>
+    </div>
+  `).join('');
+
+  // Stats
+  document.getElementById('m-stats').innerHTML = c.stats.map(s => `
+    <div class="modal-stat">
+      <div class="modal-stat-val">${s.val}</div>
+      <div class="modal-stat-lbl">${s.lbl}</div>
+    </div>
+  `).join('');
+
+  // Reviews
+  document.getElementById('m-reviews').innerHTML = c.reviews.map(r => `
+    <div class="review${r.featured?' featured-review':''}">
+      <div class="review-header">
+        <div class="review-avatar" style="background:${c.color}22;color:${c.color};">${r.avatar}</div>
+        <div>
+          <div class="review-name">${r.name}</div>
+          <div class="review-meta">${r.meta}</div>
+        </div>
+        <div class="review-stars">${'★'.repeat(r.stars)}</div>
+      </div>
+      <div class="review-text">${r.text}</div>
+      ${r.pr ? `<div class="review-pr">🏅 ${r.pr}</div>` : ''}
+    </div>
+  `).join('');
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay') && !e.target.classList.contains('modal-close')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function toggleFilter(el, val) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+renderGrid();
+</script>
+</body>
+</html>
