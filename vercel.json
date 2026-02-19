@@ -1,9 +1,4 @@
 {
   "buildCommand": "node build.js",
-  "outputDirectory": ".",
-  "functions": {
-    "api/callback.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  "outputDirectory": "."
 }
