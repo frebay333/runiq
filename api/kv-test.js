@@ -1,39 +1,27 @@
-// api/kv-test.js — tests KV read/write directly
 export default async function handler(req, res) {
-  const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
-  const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Log all env vars that start with UPSTASH or KV to debug
+  const envDebug = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (k.includes('UPSTASH') || k.includes('KV') || k.includes('REDIS')) {
+      envDebug[k] = v ? v.slice(0, 20) + '...' : 'EMPTY';
+    }
+  }
 
-  if (!KV_URL || !KV_TOKEN) {
-    return res.status(500).json({ error: 'KV env vars missing', KV_URL: !!KV_URL, KV_TOKEN: !!KV_TOKEN });
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) {
+    return res.status(500).json({ error: 'Missing vars', envDebug });
   }
 
   try {
-    // Write test
-    const writeRes = await fetch(`${KV_URL}/set/test-key/hello-world`, {
+    const r = await fetch(`${url}/set/test/hello`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
-    const writeData = await writeRes.json();
-
-    // Read test
-    const readRes = await fetch(`${KV_URL}/get/test-key`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` }
-    });
-    const readData = await readRes.json();
-
-    // Keys test
-    const keysRes = await fetch(`${KV_URL}/keys/*`, {
-      headers: { Authorization: `Bearer ${KV_TOKEN}` }
-    });
-    const keysData = await keysRes.json();
-
-    return res.status(200).json({
-      write: writeData,
-      read: readData,
-      keys: keysData,
-      kvUrl: KV_URL.slice(0, 30) + '...'
-    });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+    const d = await r.json();
+    return res.status(200).json({ success: true, result: d, envDebug });
+  } catch(e) {
+    return res.status(500).json({ error: e.message, envDebug });
   }
 }
