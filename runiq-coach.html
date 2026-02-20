@@ -697,21 +697,27 @@ function renderRoster(filter='') {
   list.innerHTML = '';
   ATHLETES.filter(a => a.name.toLowerCase().includes(filter.toLowerCase())).forEach(a => {
     const el = document.createElement('div');
-    el.className = `athlete-card${a.id===currentAthlete.id?' active':''}`;
+    const isActive = currentAthlete && a.id === currentAthlete.id;
+    el.className = `athlete-card${isActive ? ' active' : ''}`;
     el.onclick = () => loadAthlete(a);
+    // Compute weekly miles from activities if stats missing
+    const acts = a.activities || [];
+    const cutoff = Date.now() - 7 * 86400000;
+    const weekMi = acts.filter(x => new Date(x.start_date) > cutoff)
+                       .reduce((s,x) => s + (x.distance||0)/1609.34, 0).toFixed(1);
+    const statsHtml = a.stats 
+      ? `<div class="ac-stat">mi/wk: <span>${a.stats.weeklyMi}</span></div><div class="ac-stat">form: <span>${a.stats.form}</span></div>`
+      : `<div class="ac-stat">mi/wk: <span>${weekMi}</span></div><div class="ac-stat">runs: <span>${acts.length}</span></div>`;
     el.innerHTML = `
       <div class="ac-top">
         <div class="ac-avatar" style="background:${a.color}22;border:1px solid ${a.color}44;color:${a.color};">${a.initials}</div>
         <div style="flex:1">
           <div class="ac-name">${a.name}</div>
-          <div class="ac-goal">${a.goal}</div>
+          <div class="ac-goal">${a.goal || 'Runner'}</div>
         </div>
-        <div class="ac-flag ${a.flag}"></div>
+        <div class="ac-flag ${a.flag || 'green'}"></div>
       </div>
-      <div class="ac-stats">
-        <div class="ac-stat">mi/wk: <span>${a.stats.weeklyMi}</span></div>
-        <div class="ac-stat">form: <span>${a.stats.form}</span></div>
-      </div>
+      <div class="ac-stats">${statsHtml}</div>
     `;
     list.appendChild(el);
   });
