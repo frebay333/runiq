@@ -474,8 +474,45 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 // ══════════════════════════════════════
 // DATA
 // ══════════════════════════════════════
-const ATHLETES = [
-  {
+let ATHLETES = []; // loaded from KV on init
+
+async function loadAthletesFromKV() {
+  try {
+    const res = await fetch('/api/athlete-sync');
+    if (!res.ok) throw new Error('KV fetch failed');
+    const kvAthletes = await res.json();
+    if (kvAthletes && kvAthletes.length) {
+      // Map KV athletes to coach portal format
+      ATHLETES = kvAthletes.map((a, i) => {
+        const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
+        return {
+          id: a.id,
+          name: a.name,
+          initials: a.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+          color: colors[i % colors.length],
+          goal: 'Marathon',
+          flag: 'green',
+          nextRaceDate: 'TBD',
+          estTime: '—',
+          activities: a.activities || [],
+          lastSync: a.lastSync,
+          coachNotes: [],
+          aiInstructions: [],
+          restrictions: []
+        };
+      });
+      loadAthletesFromKV();
+      return;
+    }
+  } catch(e) {
+    console.warn('KV load failed, using demo data:', e);
+  }
+  // Fallback to demo athletes if KV empty
+  loadDemoAthletes();
+}
+
+function loadDemoAthletes() {
+  ATHLETES = [{
     id:1, name:'Vu Thai', initials:'VT', color:'#e8ff47', goal:'Marathon', flag:'orange',
     nextRaceDate:'Apr 6, 2025', estTime:'3:28:14',
     stats:{
@@ -585,8 +622,9 @@ const ATHLETES = [
       { role:'athlete', text:'I feel fine though, I can handle the load' },
       { role:'ai', text:"The data disagrees. Your CTL actually dropped this week despite the volume, which tells us your body isn't absorbing the training. I'm flagging this to Coach Mike for his weekly review." },
     ]
-  },
-];
+  },];
+  loadAthletesFromKV();
+}
 // ── YOUR API KEY ──────────────────────────────────────────
 const ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'; // ← paste your key here
 
