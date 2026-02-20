@@ -291,7 +291,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.4.1</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.4.2</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -330,7 +330,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.4.1</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.4.2</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -489,16 +489,27 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         </div>
       </div>
       <div id="plan-output">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">VIEW</div>
+          <div style="display:flex;gap:6px;">
+            <button id="view-weekly-btn" onclick="setPlanView('weekly')" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 14px;border-radius:2px;border:1px solid var(--accent);background:var(--accent);color:#000;cursor:pointer;">WEEKLY</button>
+            <button id="view-monthly-btn" onclick="setPlanView('monthly')" style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:5px 14px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">MONTHLY</button>
+          </div>
+        </div>
+        <div id="plan-view-weekly">
         <div class="card" id="plan-card">
           <div class="card-title" id="plan-week-title">Week 1 of 16 — Base Building</div>
           <div class="week-grid" id="week-grid"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
             <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">Total: <span style="color:var(--accent);" id="week-total">—</span></div>
             <div style="display:flex;gap:7px;">
-              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;">← Prev</button>
-              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;">Next →</button>
+              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(-1)">← Prev</button>
+              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(1)">Next →</button>
             </div>
           </div>
+        </div>
+        <div id="plan-view-monthly" style="display:none;">
+          <div id="monthly-grid"></div>
         </div>
         <div class="card">
           <div class="card-title">16-Week Phase Overview</div>
@@ -556,8 +567,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         </div>
         <div class="pace-breakdown" id="pace-breakdown"></div>
         <div class="hr-chart-wrap" id="hr-chart-wrap">
-          <div class="hr-chart-title">Heart Rate — <span id="hr-chart-label">this workout</span></div>
-          <canvas class="hr-canvas" id="hr-canvas" height="56"></canvas>
+          <div class="hr-chart-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Heart Rate + Pace — <span id="hr-chart-label">this workout</span></span>
+            <div id="chart-tooltip" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:1px;display:none;"></div>
+          </div>
+          <div style="position:relative;">
+            <canvas class="hr-canvas" id="hr-canvas" height="80" style="height:80px;"></canvas>
+          </div>
           <div class="hr-zones" id="hr-zones"></div>
         </div>
       </div>
@@ -1021,17 +1037,23 @@ function drawVolChart(activeWeeks) {
   const numWeeks = 12;
   const weekMi = Array(numWeeks).fill(0);
   const now = new Date();
-  // Find start of current week (Monday)
-  const dayOfWeek = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  // Find START of current week (Monday at 00:00:00)
+  const dow = (now.getDay() + 6) % 7; // Mon=0 ... Sun=6
   const weekStart = new Date(now);
-  weekStart.setHours(0,0,0,0);
-  weekStart.setDate(weekStart.getDate() - dayOfWeek);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - dow);
+  const weekStartMs = weekStart.getTime();
 
   APP.activities.forEach(a => {
-    const actDate = new Date(a.start_date);
-    const msAgo = weekStart - actDate;
-    const wk = Math.floor(msAgo / (7 * 86400000));
-    if (wk >= 0 && wk < numWeeks) weekMi[numWeeks - 1 - wk] += actToMi(a);
+    const actMs = new Date(a.start_date).getTime();
+    const msAgo = weekStartMs - actMs;
+    if (msAgo < 0) {
+      // This week (current)
+      weekMi[numWeeks - 1] += actToMi(a);
+    } else {
+      const wk = Math.floor(msAgo / (7 * 86400000)) + 1;
+      if (wk < numWeeks) weekMi[numWeeks - 1 - wk] += actToMi(a);
+    }
   });
 
   const maxMi = Math.max(...weekMi, 1);
@@ -1064,6 +1086,7 @@ function selectPhil(el, phil) {
   document.querySelectorAll('.philosophy-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentPhil = phil;
+  generatePlan();
 }
 
 function getRecentRunsForPlan() {
@@ -1146,6 +1169,96 @@ function generatePlan() {
     grid.appendChild(d);
   });
   document.getElementById('week-total').textContent = total.toFixed(0) + ' mi';
+  APP._currentWeek = 1;
+  APP._currentPhilPlan = plan;
+  document.getElementById('plan-week-title').textContent = `Week 1 of 16 — Base Building`;
+}
+
+function changeWeek(dir) {
+  if (!APP._currentPhilPlan) return;
+  APP._currentWeek = Math.max(1, Math.min(16, (APP._currentWeek || 1) + dir));
+  const phases = ['Base Building','Base Building','Base Building','Base Building','Base Building',
+    'Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev',
+    'Race Specific','Race Specific','Race Specific','Taper','Taper'];
+  document.getElementById('plan-week-title').textContent = `Week ${APP._currentWeek} of 16 — ${phases[APP._currentWeek-1]}`;
+  // Re-render with slight variation per week
+  const weekScale = APP._currentWeek <= 5 ? 0.85 + APP._currentWeek*0.03 :
+                    APP._currentWeek <= 11 ? 1.0 + (APP._currentWeek-5)*0.02 :
+                    APP._currentWeek <= 14 ? 1.1 : 0.75;
+  const grid = document.getElementById('week-grid');
+  grid.innerHTML = '';
+  let total = 0;
+  APP._currentPhilPlan.forEach(day => {
+    const baseMi = parseFloat(day.dist) || 0;
+    const scaledMi = baseMi ? Math.round(baseMi * weekScale) : 0;
+    const dist = scaledMi ? scaledMi + ' mi' : '';
+    total += scaledMi;
+    const d = document.createElement('div');
+    d.className = 'day-block';
+    d.innerHTML = `<div class="day-name">${day.day}</div><div class="day-type ${day.type}">${day.type}</div><div class="day-workout">${day.name}</div>${dist?`<div class="day-dist">${dist}</div>`:''}`;
+    grid.appendChild(d);
+  });
+  document.getElementById('week-total').textContent = total + ' mi';
+}
+
+function setPlanView(view) {
+  const weekly = document.getElementById('plan-view-weekly');
+  const monthly = document.getElementById('plan-view-monthly');
+  const wBtn = document.getElementById('view-weekly-btn');
+  const mBtn = document.getElementById('view-monthly-btn');
+  if (view === 'weekly') {
+    weekly.style.display = 'block';
+    monthly.style.display = 'none';
+    wBtn.style.background = 'var(--accent)'; wBtn.style.color = '#000'; wBtn.style.borderColor = 'var(--accent)';
+    mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--muted)'; mBtn.style.borderColor = 'var(--border)';
+  } else {
+    weekly.style.display = 'none';
+    monthly.style.display = 'block';
+    wBtn.style.background = 'transparent'; wBtn.style.color = 'var(--muted)'; wBtn.style.borderColor = 'var(--border)';
+    mBtn.style.background = 'var(--accent)'; mBtn.style.color = '#000'; mBtn.style.borderColor = 'var(--accent)';
+    renderMonthlyPlan();
+  }
+}
+
+function renderMonthlyPlan() {
+  if (!APP._currentPhilPlan) { generatePlan(); }
+  const plan = APP._currentPhilPlan;
+  const phases = [
+    {weeks:[1,2,3,4], label:'Base Building', color:'var(--accent)'},
+    {weeks:[5,6,7,8], label:'Aerobic Development', color:'var(--blue)'},
+    {weeks:[9,10,11,12], label:'Lactate & Threshold', color:'var(--accent2)'},
+    {weeks:[13,14,15,16], label:'Race Specific & Taper', color:'var(--orange)'},
+  ];
+  const grid = document.getElementById('monthly-grid');
+  grid.innerHTML = '';
+  phases.forEach(phase => {
+    const phaseEl = document.createElement('div');
+    phaseEl.className = 'card';
+    phaseEl.style.marginBottom = '12px';
+    let weeksHtml = phase.weeks.map(wk => {
+      const scale = wk <= 5 ? 0.85 + wk*0.03 : wk <= 11 ? 1.0 + (wk-5)*0.02 : wk <= 14 ? 1.1 : 0.75;
+      const daysHtml = plan.map(day => {
+        const baseMi = parseFloat(day.dist) || 0;
+        const mi = baseMi ? Math.round(baseMi * scale) : 0;
+        return `<div style="flex:1;min-width:0;text-align:center;padding:4px 2px;">
+          <div style="font-family:'DM Mono',monospace;font-size:7px;color:var(--muted);margin-bottom:2px;">${day.day}</div>
+          <div style="font-size:8px;font-weight:500;color:${day.type==='rest'?'var(--muted)':day.type==='long'?'var(--accent)':day.type==='tempo'?'var(--accent2)':day.type==='vo2'?'var(--blue)':'var(--text)'};">${mi ? mi+'mi' : '—'}</div>
+          <div style="font-size:7px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${day.name.split(' ').slice(0,2).join(' ')}</div>
+        </div>`;
+      }).join('');
+      const total = plan.reduce((s,d) => s + (parseFloat(d.dist)||0)*scale, 0);
+      return `<div style="margin-bottom:8px;">
+        <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between;">
+          <span>WK ${wk}</span><span style="color:var(--accent);">${Math.round(total)} mi</span>
+        </div>
+        <div style="display:flex;gap:2px;">${daysHtml}</div>
+      </div>`;
+    }).join('');
+    phaseEl.innerHTML = `
+      <div class="card-title" style="border-left:3px solid ${phase.color};padding-left:10px;">${phase.label}</div>
+      ${weeksHtml}`;
+    grid.appendChild(phaseEl);
+  });
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1332,66 +1445,141 @@ function renderPaceBreakdown(a) {
 function renderHRChart(a) {
   const wrap = document.getElementById('hr-chart-wrap');
   const canvas = document.getElementById('hr-canvas');
-  const stream = a._hrStream || (a.laps && a.laps.length ? a.laps.map(l => l.average_heartrate || 140) : null);
-  if (!stream || !stream.length) { wrap.classList.remove('visible'); return; }
 
+  // Build HR stream from laps
+  const hrStream = a._hrStream || (a.laps && a.laps.length ? a.laps.map(l => l.average_heartrate).filter(Boolean) : null);
+  // Build pace stream from laps (seconds per mile)
+  const paceStream = a.laps && a.laps.length ? a.laps.map(l => l.distance > 0 ? l.elapsed_time / (l.distance / 1609.34) : null).filter(Boolean) : null;
+
+  if (!hrStream || !hrStream.length) { wrap.classList.remove('visible'); return; }
   wrap.classList.add('visible');
   document.getElementById('hr-chart-label').textContent = a.name;
 
   const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 400;
-  const H = 56;
+  const W = canvas.offsetWidth || 500;
+  const H = 80;
   canvas.width = W;
   canvas.height = H;
   ctx.clearRect(0, 0, W, H);
 
-  const minHR = Math.min(...stream) - 5;
-  const maxHR = Math.max(...stream) + 5;
+  // HR scale
+  const minHR = Math.min(...hrStream) - 5;
+  const maxHR = Math.max(...hrStream) + 5;
+  const hrY = hr => H - ((hr - minHR) / (maxHR - minHR)) * H;
 
-  // Zone colors (simplified)
-  const zoneColor = (hr) => {
-    if (hr < 130) return '#4da6ff';
-    if (hr < 150) return '#3dff8f';
-    if (hr < 165) return '#e8ff47';
-    if (hr < 178) return '#ff9f43';
-    return '#ff4d2e';
-  };
-
-  // Fill under curve
+  // HR fill
   ctx.beginPath();
-  stream.forEach((hr, i) => {
-    const x = (i / (stream.length-1)) * W;
-    const y = H - ((hr - minHR) / (maxHR - minHR)) * H;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  hrStream.forEach((hr, i) => {
+    const x = (i / (hrStream.length - 1)) * W;
+    i === 0 ? ctx.moveTo(x, hrY(hr)) : ctx.lineTo(x, hrY(hr));
   });
   ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, 'rgba(232,255,71,.25)');
-  grad.addColorStop(1, 'rgba(232,255,71,.03)');
-  ctx.fillStyle = grad;
-  ctx.fill();
+  grad.addColorStop(0, 'rgba(232,255,71,.2)');
+  grad.addColorStop(1, 'rgba(232,255,71,.02)');
+  ctx.fillStyle = grad; ctx.fill();
 
-  // Line
+  // HR line
   ctx.beginPath();
   ctx.lineWidth = 1.5;
-  stream.forEach((hr, i) => {
-    const x = (i / (stream.length-1)) * W;
-    const y = H - ((hr - minHR) / (maxHR - minHR)) * H;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  hrStream.forEach((hr, i) => {
+    const x = (i / (hrStream.length - 1)) * W;
+    i === 0 ? ctx.moveTo(x, hrY(hr)) : ctx.lineTo(x, hrY(hr));
   });
-  ctx.strokeStyle = 'rgba(232,255,71,.7)';
-  ctx.stroke();
+  ctx.strokeStyle = 'rgba(232,255,71,.8)'; ctx.stroke();
+
+  // Pace overlay (orange line)
+  if (paceStream && paceStream.length > 1) {
+    const minPace = Math.min(...paceStream) - 10;
+    const maxPace = Math.max(...paceStream) + 10;
+    const paceY = p => H - ((p - minPace) / (maxPace - minPace)) * H * 0.85; // scale slightly inside
+    ctx.beginPath();
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    paceStream.forEach((p, i) => {
+      const x = (i / (paceStream.length - 1)) * W;
+      i === 0 ? ctx.moveTo(x, paceY(p)) : ctx.lineTo(x, paceY(p));
+    });
+    ctx.strokeStyle = 'rgba(255,159,67,.7)'; ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Hover tooltip
+  const tooltip = document.getElementById('chart-tooltip');
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const idx = Math.round((mx / W) * (hrStream.length - 1));
+    if (idx >= 0 && idx < hrStream.length) {
+      const hr = hrStream[idx];
+      const pace = paceStream && paceStream[Math.round(idx * (paceStream.length-1) / (hrStream.length-1))];
+      const paceStr = pace ? fmtPace(pace) + '/mi' : '';
+      tooltip.style.display = 'block';
+      tooltip.textContent = `${hr}bpm${paceStr ? ' · ' + paceStr : ''}`;
+
+      // Draw crosshair
+      ctx.clearRect(0, 0, W, H);
+      // Redraw everything
+      renderHRChartData(ctx, W, H, hrStream, paceStream, minHR, maxHR);
+      ctx.beginPath();
+      ctx.setLineDash([2, 3]);
+      ctx.strokeStyle = 'rgba(255,255,255,.3)';
+      ctx.lineWidth = 1;
+      const x = (idx / (hrStream.length - 1)) * W;
+      ctx.moveTo(x, 0); ctx.lineTo(x, H);
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+  };
+  canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
+
+  // Store streams for hover redraw
+  canvas._hrStream = hrStream;
+  canvas._paceStream = paceStream;
+  canvas._minHR = minHR; canvas._maxHR = maxHR;
 
   // Zones legend
-  const avgHR = Math.round(stream.reduce((s,h) => s+h, 0) / stream.length);
-  const maxHRVal = Math.round(Math.max(...stream));
+  const avgHR = Math.round(hrStream.reduce((s,h) => s+h, 0) / hrStream.length);
+  const maxHRVal = Math.round(Math.max(...hrStream));
   document.getElementById('hr-zones').innerHTML = `
     <span class="hz" style="background:rgba(61,158,255,.1);color:var(--blue);">Avg: ${avgHR}bpm</span>
     <span class="hz" style="background:rgba(255,77,46,.1);color:var(--accent2);">Peak: ${maxHRVal}bpm</span>
+    <span class="hz" style="background:rgba(255,159,67,.1);color:#ff9f43;">— Pace</span>
     ${avgHR < 145 ? '<span class="hz" style="background:rgba(61,255,143,.1);color:var(--green);">✓ Aerobic</span>' :
       avgHR < 165 ? '<span class="hz" style="background:rgba(232,255,71,.1);color:var(--accent);">Threshold</span>' :
       '<span class="hz" style="background:rgba(255,77,46,.1);color:var(--accent2);">VO2 Zone</span>'}
   `;
+}
+
+function renderHRChartData(ctx, W, H, hrStream, paceStream, minHR, maxHR) {
+  ctx.clearRect(0, 0, W, H);
+  const hrY = hr => H - ((hr - minHR) / (maxHR - minHR)) * H;
+  ctx.beginPath();
+  hrStream.forEach((hr, i) => {
+    const x = (i / (hrStream.length - 1)) * W;
+    i === 0 ? ctx.moveTo(x, hrY(hr)) : ctx.lineTo(x, hrY(hr));
+  });
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(232,255,71,.2)');
+  grad.addColorStop(1, 'rgba(232,255,71,.02)');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.lineWidth = 1.5;
+  hrStream.forEach((hr, i) => {
+    const x = (i / (hrStream.length - 1)) * W;
+    i === 0 ? ctx.moveTo(x, hrY(hr)) : ctx.lineTo(x, hrY(hr));
+  });
+  ctx.strokeStyle = 'rgba(232,255,71,.8)'; ctx.stroke();
+  if (paceStream && paceStream.length > 1) {
+    const minP = Math.min(...paceStream) - 10;
+    const maxP = Math.max(...paceStream) + 10;
+    const paceY = p => H - ((p - minP) / (maxP - minP)) * H * 0.85;
+    ctx.beginPath(); ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+    paceStream.forEach((p, i) => {
+      const x = (i / (paceStream.length - 1)) * W;
+      i === 0 ? ctx.moveTo(x, paceY(p)) : ctx.lineTo(x, paceY(p));
+    });
+    ctx.strokeStyle = 'rgba(255,159,67,.7)'; ctx.stroke(); ctx.setLineDash([]);
+  }
 }
 
 // ── COACH CHAT ───────────────────────────────────────────────
@@ -1416,12 +1604,27 @@ async function analyzeWorkout() {
   document.getElementById('analyze-bar').style.display = 'none';
   showTyping();
 
+  // Fetch detailed activity if laps not loaded yet
+  if (!APP.currentWorkout.laps && APP.accessToken) {
+    try {
+      const detailed = await stravaGet(`/activities/${APP.currentWorkout.id}`);
+      Object.assign(APP.currentWorkout, detailed);
+      const idx = APP.activities.findIndex(x => x.id === APP.currentWorkout.id);
+      if (idx >= 0) APP.activities[idx] = APP.currentWorkout;
+      renderWorkoutBanner(APP.currentWorkout);
+    } catch(e) { console.warn('Could not fetch lap detail:', e); }
+  }
+
   const a = APP.currentWorkout;
   const mi = actToMi(a).toFixed(2);
   const pace = fmtPace(actPaceMi(a));
   const hr = a.average_heartrate ? Math.round(a.average_heartrate) : null;
-  const laps = a.laps || [];
-  const lapStr = laps.length ? laps.slice(0,6).map((l,i) => `Mile ${i+1}: ${fmtPace(l.elapsed_time/(l.distance/1609.34))}`).join(', ') : 'No lap data';
+  const laps = (a.laps || []).filter(l => l.distance > 100);
+  const lapStr = laps.length ? laps.slice(0,8).map((l,i) => {
+    const lapMi = l.distance / 1609.34;
+    const lapPace = fmtPace(l.moving_time / lapMi);
+    return `Mile ${i+1}: ${lapPace}`;
+  }).join(', ') : 'No lap data';
   const daysAgo = Math.floor((Date.now() - new Date(a.start_date)) / 86400000);
 
   const workoutDetail = `${a.name} — ${mi} miles @ ${pace}/mi avg${hr ? `, HR avg ${hr}bpm` : ''}${a.max_heartrate ? `, peak ${a.max_heartrate}bpm` : ''}${a.average_cadence ? `, cadence ${Math.round(a.average_cadence)}spm` : ''}. ${daysAgo === 0 ? 'Just completed.' : `${daysAgo} day(s) ago.`} Splits: ${lapStr}.`;
