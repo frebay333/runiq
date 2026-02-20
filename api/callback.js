@@ -23,8 +23,8 @@ export default async function handler(req, res) {
     }
 
     // Store tokens in Upstash KV using correct REST format: /set/key/value
-    const KV_URL   = process.env.KV_REST_API_URL;
-    const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+    const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
+    const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
     if (KV_URL && KV_TOKEN && data.athlete) {
       const aid = data.athlete.id;
       const name = `${data.athlete.firstname} ${data.athlete.lastname}`;

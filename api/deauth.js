@@ -5,8 +5,8 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const KV_URL   = process.env.KV_REST_API_URL;
-  const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+  const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
+  const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
   const CLIENT_ID     = process.env.STRAVA_CLIENT_ID;
   const CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 

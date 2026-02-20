@@ -1,7 +1,7 @@
 // api/kv-test.js — tests KV read/write directly
 export default async function handler(req, res) {
-  const KV_URL   = process.env.KV_REST_API_URL;
-  const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+  const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
+  const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!KV_URL || !KV_TOKEN) {
     return res.status(500).json({ error: 'KV env vars missing', KV_URL: !!KV_URL, KV_TOKEN: !!KV_TOKEN });
