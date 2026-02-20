@@ -336,7 +336,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
         <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;">
           <table class="runs-table">
             <thead>
-              <tr><th>Day</th><th>Workout</th><th>Type</th><th>Distance</th><th>Pace</th><th>HR</th><th>Note</th></tr>
+              <tr><th>Day</th><th>Workout</th><th>Type</th><th>Dist</th><th>Pace</th><th>HR</th><th>Strava</th></tr>
             </thead>
             <tbody id="runs-tbody"></tbody>
           </table>
@@ -345,7 +345,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
         <div class="card" style="padding:0;overflow:hidden;">
           <table class="runs-table">
             <thead>
-              <tr><th>Day</th><th>Workout</th><th>Type</th><th>Distance</th><th>Pace</th><th>HR</th><th>Note</th></tr>
+              <tr><th>Day</th><th>Workout</th><th>Type</th><th>Dist</th><th>Pace</th><th>HR</th><th>Strava</th></tr>
             </thead>
             <tbody id="prev-runs-tbody"></tbody>
           </table>
@@ -756,9 +756,63 @@ function loadAthlete(a) {
 // ══════════════════════════════════════
 // OVERVIEW
 // ══════════════════════════════════════
+function computeAthleteStats(a) {
+  const acts = a.activities || [];
+  const now = Date.now();
+  const dow = (new Date().getDay() + 6) % 7;
+  const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - dow);
+  const prevWeekStart = new Date(weekStart); prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+
+  const thisWeekActs = acts.filter(x => new Date(x.start_date) >= weekStart);
+  const prevWeekActs = acts.filter(x => new Date(x.start_date) >= prevWeekStart && new Date(x.start_date) < weekStart);
+
+  const toMi = a => (a.distance || 0) / 1609.34;
+  const toPace = a => {
+    const mi = toMi(a); if (!mi) return '—';
+    const spm = (a.moving_time || 0) / mi;
+    return `${Math.floor(spm/60)}:${String(Math.round(spm%60)).padStart(2,'0')}`;
+  };
+  const toHR = a => a.average_heartrate ? Math.round(a.average_heartrate) : '—';
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const weeklyMi = thisWeekActs.reduce((s,x) => s + toMi(x), 0).toFixed(1);
+  const longRun = thisWeekActs.length ? Math.max(...thisWeekActs.map(toMi)).toFixed(1) + ' mi' : '—';
+  const qualityTypes = ['Tempo','Interval','Workout','Race','Speed','Track'];
+  const qualityDone = thisWeekActs.filter(x => qualityTypes.some(q => x.name.includes(q))).length;
+
+  // Best pace efforts from recent runs
+  const recentRuns = acts.slice(0, 20).filter(x => toMi(x) > 0.5);
+  const sortedByPace = [...recentRuns].sort((a,b) => (a.moving_time/toMi(a)) - (b.moving_time/toMi(b)));
+  const bestPace = sortedByPace[0] ? toPace(sortedByPace[0]) : '—';
+
+  return {
+    weeklyMi, weeklyMiDone: weeklyMi, weeklyMiPrescribed: '—', weeklyMiTotal: weeklyMi,
+    qualityDone, qualityTotal: 3, longRun,
+    best1mi: bestPace, best2mi: bestPace, best3mi: bestPace,
+    form: Math.min(99, Math.round(thisWeekActs.reduce((s,x) => s+toMi(x),0) * 2.5)),
+    ctlTrend: '+0', flagNote: 'Real data from Strava',
+    currentWeekRuns: thisWeekActs.map(x => ({
+      id: x.id, day: days[new Date(x.start_date).getDay()], name: x.name,
+      type: x.sport_type === 'Run' ? (x.name.toLowerCase().includes('tempo') ? 'tempo' : x.name.toLowerCase().includes('long') ? 'long' : 'easy') : 'easy',
+      dist: toMi(x).toFixed(1) + ' mi', pace: toPace(x), hr: toHR(x), note: '', done: true
+    })),
+    prevWeekRuns: prevWeekActs.map(x => ({
+      id: x.id, day: days[new Date(x.start_date).getDay()], name: x.name,
+      type: 'easy', dist: toMi(x).toFixed(1) + ' mi', pace: toPace(x), hr: toHR(x), note: '', done: true
+    }))
+  };
+}
+
 function renderOverview() {
   const a = currentAthlete;
-  const s = a.stats;
+  // Use real computed stats if no hardcoded stats or athlete is from KV
+  // Always compute from real activities for KV athletes
+  const computed = computeAthleteStats(a);
+  const s = (a.stats && a.stats.weeklyMiDone !== undefined) ? a.stats : computed;
+  if (!a.currentWeekRuns || !a.currentWeekRuns.length) {
+    a.currentWeekRuns = computed.currentWeekRuns;
+    a.prevWeekRuns = computed.prevWeekRuns;
+  }
 
   // Header: name + race info
   document.getElementById('overview-athlete-name').innerHTML =
@@ -859,8 +913,9 @@ function renderRunTable(tbodyId, runs) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
   tbody.innerHTML = '';
-  runs.forEach(r => {
+  (runs || []).forEach(r => {
     const notDone = !r.done && r.dist === '—';
+    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:var(--accent);font-family:'DM Mono',monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(232,255,71,.3);padding:2px 6px;border-radius:2px;">↗ STRAVA</a>` : '—';
     tbody.innerHTML += `<tr style="${notDone?'opacity:0.45;':''}">
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">${r.day}</td>
       <td style="${notDone?'font-style:italic;color:var(--muted);':''}">${r.name}</td>

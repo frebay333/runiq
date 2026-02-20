@@ -291,7 +291,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.4.2</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.4.4</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -330,9 +330,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.4.2</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.4.4</div>
   <div class="nav-right">
-    <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
+    <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
       <div class="dot"></div>
       <span id="nav-athlete-name">Loading...</span>
@@ -497,14 +497,15 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
           </div>
         </div>
         <div id="plan-view-weekly">
-        <div class="card" id="plan-card">
-          <div class="card-title" id="plan-week-title">Week 1 of 16 — Base Building</div>
-          <div class="week-grid" id="week-grid"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
-            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">Total: <span style="color:var(--accent);" id="week-total">—</span></div>
-            <div style="display:flex;gap:7px;">
-              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(-1)">← Prev</button>
-              <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(1)">Next →</button>
+          <div class="card" id="plan-card">
+            <div class="card-title" id="plan-week-title">Week 1 of 16 — Base Building</div>
+            <div class="week-grid" id="week-grid"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+              <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">Total: <span style="color:var(--accent);" id="week-total">—</span></div>
+              <div style="display:flex;gap:7px;">
+                <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(-1)">← Prev</button>
+                <button class="btn btn-ghost" style="padding:7px 12px;font-size:9px;" onclick="changeWeek(1)">Next →</button>
+              </div>
             </div>
           </div>
         </div>
@@ -908,9 +909,12 @@ function showPage(id, el) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   if (el) el.classList.add('active');
-  if (id === 'coach' && !APP.chatInitialized) {
-    APP.chatInitialized = true;
-    setTimeout(() => initCoachChat(), 300);
+  if (id === 'coach') {
+    setTimeout(() => {
+      if (APP.activities && APP.activities.length) {
+        initCoachChat();
+      }
+    }, 300);
   }
 }
 
@@ -1843,7 +1847,7 @@ function renderActivityList() {
     const row = document.createElement('div');
     row.className = `activity-row${excl?' excluded':''}`;
     row.innerHTML = `
-      <div class="act-name" title="${act.name}">${act.name}</div>
+      <div class="act-name" title="${act.name}"><a href="https://www.strava.com/activities/${act.id}" target="_blank" style="color:inherit;text-decoration:none;">${act.name} <span style="color:var(--accent);font-size:9px;">↗</span></a></div>
       <div class="act-date">${date}</div>
       <div class="act-dist">${mi} mi</div>
       <div class="act-pace">${pace}/mi</div>
