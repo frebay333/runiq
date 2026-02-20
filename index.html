@@ -497,7 +497,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         <div class="persona-wrap">
           <div class="persona-badge" onclick="togglePersonaDD()">
             <div id="p-icon" style="font-size:18px;">🏡</div>
-            <div style="flex:1"><div id="p-name" style="font-size:13px;font-weight:500;">Neighbor Bob</div><div id="p-desc" style="font-size:11px;color:var(--muted);">Encouraging, been there done that</div></div>
+            <div style="flex:1"><div id="p-name" style="font-size:13px;font-weight:500;">Armchair JB</div><div id="p-desc" style="font-size:11px;color:var(--muted);">Gives whacked advice</div></div>
             <span style="color:var(--muted);font-size:11px;">▾</span>
           </div>
           <div class="persona-dropdown" id="persona-dd"></div>
@@ -1079,7 +1079,7 @@ function buildPersonaDropdown() {
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {
     drillsergeant:{ id:'drillsergeant', icon:'🪖', name:'Drill Sergeant', desc:'Zero tolerance for excuses' },
-    neighborbob:  { id:'neighborbob',   icon:'🏡', name:'Neighbor Bob',   desc:'Encouraging, been there done that' },
+    neighborbob:  { id:'neighborbob',   icon:'🏡', name:'Neighbor Bob',   desc:'Gives whacked advice' },
     professor:    { id:'professor',     icon:'🔬', name:'The Professor',  desc:'Physiology & biomechanics nerd' },
     hypeman:      { id:'hypeman',       icon:'🔥', name:'Hype Man',       desc:'Your biggest fan, always lit' },
     elitepacer:   { id:'elitepacer',    icon:'🏆', name:'Elite Pacer',    desc:'D1 level, no fluff' },
@@ -1182,6 +1182,8 @@ async function selectWorkout(activity, el) {
   }
 
   APP.currentWorkout = detailed;
+  APP._analyzed = false;
+  APP._chatRunning = false;
   renderWorkoutBanner(detailed);
   document.getElementById('ping-btn').className = 'ping-btn';
   document.getElementById('chat-messages').innerHTML = '';
@@ -1326,8 +1328,9 @@ function initCoachChat() {
 }
 
 async function analyzeWorkout() {
-  if (APP._chatRunning) return;
+  if (APP._chatRunning || APP._analyzed) return;
   APP._chatRunning = true;
+  APP._analyzed = true;
   if (!APP.currentWorkout) return;
   APP.chatHistory = [];
   document.getElementById('chat-messages').innerHTML = '';
@@ -1395,10 +1398,10 @@ Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No
 function getSuggestions() {
   const s = {
     drillsergeant: ['Legs felt dead', 'Hit every split', 'Struggled at the end', 'What do I fix next?'],
-    jb:   ['Felt pretty good!', 'Harder than expected', 'Proud of this one', 'What should I focus on?'],
+    neighborbob:   ['Felt pretty good!', 'Harder than expected', 'Proud of this one', 'What should I focus on?'],
     professor:     ['My HR was higher than expected', 'Tell me about lactate threshold', 'Was my cadence optimal?', 'What zones was I in?'],
-    huan:       ['I crushed it!', 'Really tough but worth it', 'Feeling motivated', 'How does this build my goal?'],
-    d1:    ['Splits were inconsistent', 'Felt like threshold the whole time', 'Ready for harder work', 'Break down the physiology'],
+    hypeman:       ['I crushed it!', 'Really tough but worth it', 'Feeling motivated', 'How does this build my goal?'],
+    elitepacer:    ['Splits were inconsistent', 'Felt like threshold the whole time', 'Ready for harder work', 'Break down the physiology'],
   };
   return s[APP.currentPersona] || s.neighborbob;
 }
