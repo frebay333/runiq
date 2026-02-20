@@ -21,9 +21,18 @@ body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font
 
 /* ── LOGIN ── */
 #login-screen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center;}
-.login-box{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:48px;width:380px;animation:fadeUp .5s ease;}
-.login-logo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:3px;color:var(--accent);margin-bottom:4px;}
-.login-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:28px;}
+.login-box{background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:48px 56px;width:760px;max-width:95vw;animation:fadeUp .5s ease;}
+.login-header{text-align:center;margin-bottom:40px;}
+.login-panels{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;align-items:start;}
+.login-panel{padding:0 32px;}
+.login-divider-v{background:var(--border);width:1px;height:100%;}
+.login-logo{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:4px;color:var(--accent);margin-bottom:4px;}
+.login-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.login-panel-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.btn-coach{width:100%;background:var(--s2);color:var(--accent);border:1px solid var(--accent);border-radius:var(--r);padding:13px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-coach:hover{background:rgba(232,255,71,.1);}
+.coach-pw-input{width:100%;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;margin-bottom:10px;outline:none;box-sizing:border-box;}
+.coach-pw-input:focus{border-color:var(--accent);}
 .login-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
 .login-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;margin-bottom:12px;}
 .login-input:focus{border-color:var(--accent);}
@@ -279,16 +288,35 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 <!-- ══ LOGIN ══ -->
 <div id="login-screen">
   <div class="login-box fade-up">
-    <div class="login-logo">RunIQ</div>
-    <div class="login-sub">Athlete Portal</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.3.7</div>
-    <button class="btn-strava" onclick="connectStrava()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-      Connect with Strava
-    </button>
-    <div class="login-divider">OR</div>
-    <button class="btn-demo" onclick="loadDemoMode()">Continue with Demo Data</button>
-    <div id="login-error" style="color:#ff4d4d;font-size:11px;font-family:'DM Mono',monospace;margin-top:10px;display:none;"></div>
+    <div class="login-header">
+      <div class="login-logo">RunIQ</div>
+      <div class="login-sub">Race · Plan · Coach</div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.3.8</div>
+    </div>
+    <div class="login-panels">
+      <!-- Athlete Panel -->
+      <div class="login-panel">
+        <div class="login-panel-title">🏃 Athlete Login</div>
+        <button class="btn-strava" onclick="connectStrava()" style="margin-bottom:10px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+          Connect with Strava
+        </button>
+        <button class="btn-demo" onclick="loadDemoMode()">Continue with Demo Data</button>
+        <div id="login-error" style="color:#ff4d4d;font-size:11px;font-family:'DM Mono',monospace;margin-top:10px;display:none;"></div>
+      </div>
+      <!-- Divider -->
+      <div class="login-divider-v"></div>
+      <!-- Coach Panel -->
+      <div class="login-panel">
+        <div class="login-panel-title">⚡ Coach Login</div>
+        <input class="coach-pw-input" type="password" id="home-coach-pw" placeholder="Enter coach password" 
+          onkeydown="if(event.key==='Enter')coachLoginFromHome()"/>
+        <button class="btn-coach" onclick="coachLoginFromHome()">
+          Enter Coach Portal
+        </button>
+        <div id="coach-login-error" style="color:#ff4d4d;font-size:11px;font-family:'DM Mono',monospace;margin-top:10px;display:none;">Incorrect password</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -302,7 +330,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.3.7</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.3.8</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -799,6 +827,18 @@ function finalizeApp() {
 
   // Show baseline banner on plan page
   updateBaselineBanner();
+}
+
+// ── COACH LOGIN FROM HOME ────────────────────────────────────
+function coachLoginFromHome() {
+  const pw = document.getElementById('home-coach-pw').value;
+  if (pw === 'coach123') {
+    window.location.href = 'runiq-coach.html?auth=coach123';
+  } else {
+    const err = document.getElementById('coach-login-error');
+    err.style.display = 'block';
+    setTimeout(() => err.style.display = 'none', 2000);
+  }
 }
 
 // ── KV SYNC ──────────────────────────────────────────────────

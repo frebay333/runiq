@@ -478,36 +478,41 @@ let ATHLETES = []; // loaded from KV on init
 
 async function loadAthletesFromKV() {
   try {
+    // Step 1: get athlete index list
     const res = await fetch('/api/athlete-sync');
     if (!res.ok) throw new Error('KV fetch failed');
     const kvAthletes = await res.json();
+
     if (kvAthletes && kvAthletes.length) {
-      // Map KV athletes to coach portal format
-      ATHLETES = kvAthletes.map((a, i) => {
-        const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
-        return {
-          id: a.id,
-          name: a.name,
-          initials: a.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
-          color: colors[i % colors.length],
-          goal: 'Marathon',
-          flag: 'green',
-          nextRaceDate: 'TBD',
-          estTime: '—',
-          activities: a.activities || [],
-          lastSync: a.lastSync,
-          coachNotes: [],
-          aiInstructions: [],
-          restrictions: []
-        };
-      });
-      loadAthletesFromKV();
+      // Step 2: fetch full athlete data (with activities) for each
+      const fullAthletes = await Promise.all(kvAthletes.map(a =>
+        fetch(`/api/athlete-sync?athleteId=${a.id}`).then(r => r.json()).catch(() => a)
+      ));
+
+      const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
+      ATHLETES = fullAthletes.map((a, i) => ({
+        id: a.id,
+        name: a.name || (a.firstname + ' ' + a.lastname),
+        initials: (a.name || (a.firstname + ' ' + a.lastname)).split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase(),
+        color: colors[i % colors.length],
+        goal: 'Marathon',
+        flag: 'green',
+        nextRaceDate: 'TBD',
+        estTime: '—',
+        activities: a.activities || [],
+        lastSync: a.lastSync,
+        coachNotes: [],
+        aiInstructions: [],
+        restrictions: []
+      }));
+
+      renderRoster();
+      if (ATHLETES.length) selectAthlete(0);
       return;
     }
   } catch(e) {
     console.warn('KV load failed, using demo data:', e);
   }
-  // Fallback to demo athletes if KV empty
   loadDemoAthletes();
 }
 
@@ -643,6 +648,18 @@ ATHLETES.forEach(a => {
 // ══════════════════════════════════════
 // LOGIN
 // ══════════════════════════════════════
+// Auto-login from URL param (coming from home page coach login)
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('auth') === 'coach123') {
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      initApp();
+    });
+  }
+})();
+
 function tryLogin() {
   const pw = document.getElementById('pw-input').value;
   if (pw === 'coach123') {
