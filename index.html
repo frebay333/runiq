@@ -281,7 +281,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="login-box fade-up">
     <div class="login-logo">RunIQ</div>
     <div class="login-sub">Athlete Portal</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.8</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.3.0</div>
     <button class="btn-strava" onclick="connectStrava()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       Connect with Strava
@@ -302,7 +302,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.2.8</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.3.0</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -534,6 +534,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         </div>
       </div>
 
+      <div id="analyze-bar" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--s2);">
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">Select a workout then analyze</div>
+        <button onclick="analyzeWorkout()" style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;background:var(--accent);color:#000;border:none;padding:6px 18px;border-radius:2px;cursor:pointer;font-weight:700;">⚡ ANALYZE</button>
+      </div>
       <div class="chat-messages" id="chat-messages"></div>
       <div class="typing-indicator" id="typing-ind">
         <div class="msg-avatar ai-av">🤖</div>
@@ -1180,15 +1184,16 @@ async function selectWorkout(activity, el) {
   APP.currentWorkout = detailed;
   renderWorkoutBanner(detailed);
   document.getElementById('ping-btn').className = 'ping-btn';
-  if (isFirstLoad) {
-    APP.chatHistory = [];
-    APP.chatInitialized = false;
-    document.getElementById('chat-messages').innerHTML = '';
-    document.getElementById('suggested-replies').innerHTML = '';
-    initCoachChat();
-  } else {
-    addMsg('ai', `Switched to: ${detailed.name} — ${actToMi(detailed).toFixed(1)} mi @ ${fmtPace(actPaceMi(detailed))}/mi. What do you want to dig into?`);
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('suggested-replies').innerHTML = '';
+  APP.chatHistory = [];
+  APP.chatInitialized = true;
+  // Try to restore saved conversation
+  const hadHistory = loadChatHistory(detailed.id);
+  if (!hadHistory) {
+    document.getElementById('analyze-bar').style.display = 'flex';
   }
+  renderWeeklySummary();
 }
 
 function renderWorkoutBanner(a) {
@@ -1310,18 +1315,24 @@ function renderHRChart(a) {
 }
 
 // ── COACH CHAT ───────────────────────────────────────────────
-async function initCoachChat() {
-  if (APP._chatRunning) return;
-  APP._chatRunning = true;
+function initCoachChat() {
   if (!APP.currentWorkout) {
     if (APP.activities.length) {
       APP.currentWorkout = APP.activities[0];
     } else return;
   }
   renderWorkoutBanner(APP.currentWorkout);
+  // Don't auto-fire — user clicks Analyze
+}
+
+async function analyzeWorkout() {
+  if (APP._chatRunning) return;
+  APP._chatRunning = true;
+  if (!APP.currentWorkout) return;
   APP.chatHistory = [];
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
+  document.getElementById('analyze-bar').style.display = 'none';
   showTyping();
 
   const a = APP.currentWorkout;
@@ -1384,10 +1395,10 @@ Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No
 function getSuggestions() {
   const s = {
     drillsergeant: ['Legs felt dead', 'Hit every split', 'Struggled at the end', 'What do I fix next?'],
-    neighborbob:   ['Felt pretty good!', 'Harder than expected', 'Proud of this one', 'What should I focus on?'],
+    jb:   ['Felt pretty good!', 'Harder than expected', 'Proud of this one', 'What should I focus on?'],
     professor:     ['My HR was higher than expected', 'Tell me about lactate threshold', 'Was my cadence optimal?', 'What zones was I in?'],
-    hypeman:       ['I crushed it!', 'Really tough but worth it', 'Feeling motivated', 'How does this build my goal?'],
-    elitepacer:    ['Splits were inconsistent', 'Felt like threshold the whole time', 'Ready for harder work', 'Break down the physiology'],
+    huan:       ['I crushed it!', 'Really tough but worth it', 'Feeling motivated', 'How does this build my goal?'],
+    d1:    ['Splits were inconsistent', 'Felt like threshold the whole time', 'Ready for harder work', 'Break down the physiology'],
   };
   return s[APP.currentPersona] || s.neighborbob;
 }
@@ -1439,6 +1450,32 @@ function pingCoach() {
   btn.textContent = '✓ Pinged';
   addMsg('human-coach', `Coach Mike has been notified and will review this workout. Expected response within 24 hours.`);
   // In production this would trigger a notification to the coach portal
+}
+
+function saveChatHistory() {
+  if (!APP.currentWorkout) return;
+  const key = `runiq_chat_${APP.currentWorkout.id}`;
+  const data = {
+    messages: document.getElementById('chat-messages').innerHTML,
+    history: APP.chatHistory,
+    ts: Date.now()
+  };
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
+}
+
+function loadChatHistory(workoutId) {
+  const key = `runiq_chat_${workoutId}`;
+  try {
+    const data = JSON.parse(localStorage.getItem(key));
+    if (data && data.messages) {
+      document.getElementById('chat-messages').innerHTML = data.messages;
+      APP.chatHistory = data.history || [];
+      document.getElementById('analyze-bar').style.display = 'none';
+      document.getElementById('chat-messages').scrollTop = 999999;
+      return true;
+    }
+  } catch(e) {}
+  return false;
 }
 
 function addMsg(role, text) {
