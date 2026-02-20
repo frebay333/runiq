@@ -904,10 +904,10 @@ function renderOverview() {
     </div>`;
 
   // Render run tables
-  renderRunTable('runs-tbody', a.currentWeekRuns);
-  renderRunTable('prev-runs-tbody', a.prevWeekRuns);
+  renderRunTable('runs-tbody', a.currentWeekRuns || []);
+  renderRunTable('prev-runs-tbody', a.prevWeekRuns || []);
 
-  document.getElementById('ai-summary-text').textContent = a.aiSummary;
+  document.getElementById('ai-summary-text').textContent = a.aiSummary || 'No summary yet — chat with the AI coach to generate one.';
 }
 
 function renderRunTable(tbodyId, runs) {
@@ -936,7 +936,7 @@ function renderChatLog() {
   const log = document.getElementById('chat-log');
   log.innerHTML = '';
   const a = currentAthlete;
-  a.chatLog.forEach((msg, i) => {
+  (a.chatLog || []).forEach((msg, i) => {
     const wrap = document.createElement('div');
     wrap.className = 'cl-msg';
     const isAI = msg.role === 'ai';
