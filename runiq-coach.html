@@ -506,6 +506,8 @@ async function loadAthletesFromKV() {
         restrictions: []
       }));
 
+      initAthleteState();
+      currentAthlete = ATHLETES[0];
       renderRoster();
       if (ATHLETES.length) loadAthlete(ATHLETES[0]);
       return;
@@ -514,6 +516,8 @@ async function loadAthletesFromKV() {
     console.warn('KV load failed, using demo data:', e);
   }
   loadDemoAthletes();
+  initAthleteState();
+  currentAthlete = ATHLETES[0];
   renderRoster();
   if (ATHLETES.length) loadAthlete(ATHLETES[0]);
 }
@@ -630,22 +634,23 @@ function loadDemoAthletes() {
       { role:'ai', text:"The data disagrees. Your CTL actually dropped this week despite the volume, which tells us your body isn't absorbing the training. I'm flagging this to Coach Mike for his weekly review." },
     ]
   },];
-  loadAthletesFromKV();
 }
 // ── YOUR API KEY ──────────────────────────────────────────
 const ANTHROPIC_API_KEY = 'YOUR_KEY_HERE'; // ← paste your key here
 
-let currentAthlete = ATHLETES[0];
+let currentAthlete = null;
 let collabHistory = [];
 let collabPlan = null;
 
 // per-athlete instruction state
 let athleteInstructions = {};
 let athleteRestrictions = {};
-ATHLETES.forEach(a => {
+function initAthleteState() { ATHLETES.forEach(a => {
   athleteInstructions[a.id] = [...a.instructions];
   athleteRestrictions[a.id] = [...a.restrictions];
+})
 });
+}
 
 // ══════════════════════════════════════
 // LOGIN
