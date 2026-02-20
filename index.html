@@ -281,7 +281,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="login-box fade-up">
     <div class="login-logo">RunIQ</div>
     <div class="login-sub">Athlete Portal</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.7</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#444;margin-bottom:24px;letter-spacing:2px;">v0.2.8</div>
     <button class="btn-strava" onclick="connectStrava()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
       Connect with Strava
@@ -302,7 +302,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.2.7</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.2.8</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -388,9 +388,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         <div class="activity-list-panel">
           <div class="activity-list-header" onclick="toggleActivityList()">
             <div class="card-title" style="margin:0;border:none;">Activities in Window</div>
-            <span class="activity-list-toggle" id="act-list-toggle">▼ SHOW</span>
+            <span class="activity-list-toggle" id="act-list-toggle">▲ HIDE</span>
           </div>
-          <div class="activity-list-body" id="activity-list-body">
+          <div class="activity-list-body open" id="activity-list-body">
             <div class="act-list-cols">
               <div class="act-col-label">Activity</div>
               <div class="act-col-label">Date</div>
@@ -935,14 +935,21 @@ function drawVolChart(activeWeeks) {
 
   if (!APP.activities.length) return;
 
-  // Build 12 weeks
+  // Build 12 weeks using Monday-anchored calendar weeks
   const numWeeks = 12;
   const weekMi = Array(numWeeks).fill(0);
-  const now = Date.now();
+  const now = new Date();
+  // Find start of current week (Monday)
+  const dayOfWeek = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  const weekStart = new Date(now);
+  weekStart.setHours(0,0,0,0);
+  weekStart.setDate(weekStart.getDate() - dayOfWeek);
+
   APP.activities.forEach(a => {
-    const daysAgo = (now - new Date(a.start_date)) / 86400000;
-    const wk = Math.floor(daysAgo / 7);
-    if (wk < numWeeks) weekMi[numWeeks - 1 - wk] += actToMi(a);
+    const actDate = new Date(a.start_date);
+    const msAgo = weekStart - actDate;
+    const wk = Math.floor(msAgo / (7 * 86400000));
+    if (wk >= 0 && wk < numWeeks) weekMi[numWeeks - 1 - wk] += actToMi(a);
   });
 
   const maxMi = Math.max(...weekMi, 1);
