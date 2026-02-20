@@ -1,43 +1,95 @@
 // api/deauth.js
-// Deauthorizes the currently connected Strava athlete
-// POST /api/deauth  (no body needed — uses app credentials)
+// Deauthorizes a connected Strava athlete using their stored token
+// POST /api/deauth  body: { athleteId } or empty to deauth all
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+  const KV_URL   = process.env.KV_REST_API_URL;
+  const KV_TOKEN = process.env.KV_REST_API_TOKEN;
   const CLIENT_ID     = process.env.STRAVA_CLIENT_ID;
   const CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
-  if (!CLIENT_ID || !CLIENT_SECRET) {
-    return res.status(500).json({ error: 'Missing Strava credentials' });
+  if (!KV_URL || !KV_TOKEN) {
+    return res.status(500).json({ error: 'KV not configured' });
   }
 
-  try {
-    // First get a fresh token using client credentials
-    const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+  async function kvGet(key) {
+    const r = await fetch(`${KV_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+    });
+    const d = await r.json();
+    return d.result ? JSON.parse(d.result) : null;
+  }
+
+  async function kvKeys(pattern) {
+    const r = await fetch(`${KV_URL}/keys/${encodeURIComponent(pattern)}`, {
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+    });
+    const d = await r.json();
+    return d.result || [];
+  }
+
+  async function kvDel(key) {
+    await fetch(`${KV_URL}/del/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
+    });
+  }
+
+  async function getRefreshedToken(tokenData) {
+    const r = await fetch('https://www.strava.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
-        grant_type: 'client_credentials'
+        refresh_token: tokenData.refresh_token,
+        grant_type: 'refresh_token'
       })
     });
+    const data = await r.json();
+    return data.access_token;
+  }
 
-    const tokenData = await tokenRes.json();
-
-    if (!tokenData.access_token) {
-      return res.status(400).json({ error: 'Could not get token', details: tokenData });
+  async function deauthAthlete(tokenData) {
+    let accessToken = tokenData.access_token;
+    if (tokenData.expires_at < Math.floor(Date.now() / 1000)) {
+      accessToken = await getRefreshedToken(tokenData);
     }
-
-    // Deauthorize using the access token
-    const deauthRes = await fetch(`https://www.strava.com/oauth/deauthorize?access_token=${tokenData.access_token}`, {
+    const r = await fetch(`https://www.strava.com/oauth/deauthorize?access_token=${accessToken}`, {
       method: 'POST'
     });
+    return r.json();
+  }
 
-    const deauthData = await deauthRes.json();
-    return res.status(200).json({ success: true, revoked: deauthData });
+  try {
+    const { athleteId } = req.body || {};
 
+    if (athleteId) {
+      const tokenData = await kvGet(`tokens:${athleteId}`);
+      if (!tokenData) return res.status(404).json({ error: 'No token found for athlete' });
+      const result = await deauthAthlete(tokenData);
+      await kvDel(`tokens:${athleteId}`);
+      return res.status(200).json({ success: true, athleteId, name: tokenData.athleteName, result });
+    } else {
+      const keys = await kvKeys('tokens:*');
+      if (!keys.length) return res.status(200).json({ success: true, message: 'No athletes stored in KV yet' });
+
+      const results = await Promise.all(keys.map(async k => {
+        const tokenData = await kvGet(k);
+        if (!tokenData) return null;
+        try {
+          const result = await deauthAthlete(tokenData);
+          await kvDel(k);
+          return { athleteId: tokenData.athleteId, name: tokenData.athleteName, result };
+        } catch(e) {
+          return { athleteId: tokenData.athleteId, name: tokenData.athleteName, error: e.message };
+        }
+      }));
+
+      return res.status(200).json({ success: true, deauthed: results.filter(Boolean) });
+    }
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

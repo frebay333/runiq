@@ -31,8 +31,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: data.message || 'Token exchange failed' });
     }
 
-    // Return access token to the frontend
-    // We intentionally do NOT return the refresh_token to the browser
+    // Store refresh token + access token in KV so coach can deauth if needed
+    const KV_URL   = process.env.KV_REST_API_URL;
+    const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+    if (KV_URL && KV_TOKEN && data.athlete) {
+      await fetch(`${KV_URL}/set/${encodeURIComponent(`tokens:${data.athlete.id}`)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          athleteId:     data.athlete.id,
+          athleteName:   `${data.athlete.firstname} ${data.athlete.lastname}`,
+          access_token:  data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at:    data.expires_at,
+          connectedAt:   new Date().toISOString()
+        })
+      }).catch(e => console.warn('KV token store failed:', e));
+    }
+
+    // Return access token to frontend (never expose refresh_token to browser)
     return res.status(200).json({
       access_token: data.access_token,
       athlete:      data.athlete,
