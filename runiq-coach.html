@@ -507,13 +507,15 @@ async function loadAthletesFromKV() {
       }));
 
       renderRoster();
-      if (ATHLETES.length) selectAthlete(0);
+      if (ATHLETES.length) loadAthlete(ATHLETES[0]);
       return;
     }
   } catch(e) {
     console.warn('KV load failed, using demo data:', e);
   }
   loadDemoAthletes();
+  renderRoster();
+  if (ATHLETES.length) loadAthlete(ATHLETES[0]);
 }
 
 function loadDemoAthletes() {
@@ -682,10 +684,9 @@ function logout() {
 // ══════════════════════════════════════
 // INIT
 // ══════════════════════════════════════
-function initApp() {
-  renderRoster();
-  loadAthlete(ATHLETES[0]);
-  // pre-start collab for first athlete
+async function initApp() {
+  // Load from KV first, then render
+  await loadAthletesFromKV();
 }
 
 // ══════════════════════════════════════
