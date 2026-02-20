@@ -645,11 +645,11 @@ let collabPlan = null;
 // per-athlete instruction state
 let athleteInstructions = {};
 let athleteRestrictions = {};
-function initAthleteState() { ATHLETES.forEach(a => {
-  athleteInstructions[a.id] = [...a.instructions];
-  athleteRestrictions[a.id] = [...a.restrictions];
-})
-});
+function initAthleteState() {
+  ATHLETES.forEach(a => {
+    athleteInstructions[a.id] = a.instructions ? [...a.instructions] : [];
+    athleteRestrictions[a.id] = a.restrictions ? [...a.restrictions] : [];
+  });
 }
 
 // ══════════════════════════════════════
