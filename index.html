@@ -357,6 +357,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         <div id="coach-login-error" style="color:#ff4d4d;font-size:11px;font-family:IBM Plex Mono,monospace;margin-top:10px;display:none;">Incorrect password</div>
       </div>
     </div>
+
+    <!-- Emergency Deauth -->
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">🔐 STRAVA SESSION STUCK?</div>
+      <button onclick="emergencyDeauth()" style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:1px;padding:7px 16px;background:transparent;border:1px solid rgba(239,68,68,.4);border-radius:4px;color:#ef4444;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='rgba(239,68,68,.08)'" onmouseout="this.style.background='transparent'">Disconnect Strava Session</button>
+      <div id="deauth-msg" style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--green);display:none;">✓ Session cleared — you can reconnect now</div>
+    </div>
   </div>
 </div>
 
@@ -508,13 +515,6 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     </div>
   </div>
 
-  <!-- Emergency deauth strip -->
-  <div style="padding:10px 40px;border-top:1px solid var(--border);background:var(--s2);display:flex;align-items:center;gap:12px;flex-shrink:0;">
-    <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">🔐 EMERGENCY DEAUTH</div>
-    <code id="deauth-snippet" style="font-family:IBM Plex Mono,monospace;font-size:10px;background:var(--s1);border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--accent2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">localStorage.removeItem('runiq_token'); location.reload();</code>
-    <button onclick="navigator.clipboard.writeText(document.getElementById('deauth-snippet').textContent).then(()=>{this.textContent='✓ Copied';setTimeout(()=>this.textContent='Copy',2000)})" style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:5px 12px;background:var(--accent2);color:#fff;border:none;border-radius:4px;cursor:pointer;">Copy</button>
-    <button onclick="localStorage.removeItem('runiq_token');location.reload()" style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--muted);">Disconnect Now</button>
-  </div>
 </div>
 
 <!-- ══════ PAGE 2: PLAN ══════ -->
@@ -556,8 +556,17 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
         <div class="card">
           <div class="card-title">Settings</div>
           <div class="field"><label class="field-label">Goal Race</label>
-            <select id="plan-goal"><option>Marathon</option><option>Half Marathon</option><option>10K</option></select></div>
-          <div class="field"><label class="field-label">Goal Time</label><input type="text" id="plan-goal-time" value="3:25:00"></div>
+            <select id="plan-goal" onchange="validateGoalTime()"><option>Marathon</option><option>Half Marathon</option><option>10K</option></select></div>
+          <div class="field"><label class="field-label">Goal Time</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="plan-goal-h" min="0" max="9" placeholder="H" style="width:52px;text-align:center;" oninput="validateGoalTime()">
+              <span style="font-family:IBM Plex Mono,monospace;color:var(--muted);">:</span>
+              <input type="number" id="plan-goal-m" min="0" max="59" placeholder="MM" style="width:60px;text-align:center;" oninput="validateGoalTime()">
+              <span style="font-family:IBM Plex Mono,monospace;color:var(--muted);">:</span>
+              <input type="number" id="plan-goal-s" min="0" max="59" placeholder="SS" style="width:60px;text-align:center;" oninput="validateGoalTime()">
+            </div>
+            <div id="goal-time-warn" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:#ef4444;margin-top:4px;display:none;"></div>
+          </div>
           <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="generatePlan()">Generate Plan →</button>
         </div>
       </div>
@@ -758,6 +767,17 @@ function deauthStrava() {
   localStorage.removeItem('runiq_token');
   localStorage.removeItem('runiq_settings');
   location.reload();
+}
+
+function emergencyDeauth() {
+  localStorage.removeItem('runiq_token');
+  localStorage.removeItem('runiq_settings');
+  const msg = document.getElementById('deauth-msg');
+  if (msg) { msg.style.display = 'block'; }
+  // Brief pause then allow reconnect without full reload
+  setTimeout(() => {
+    if (msg) msg.style.display = 'none';
+  }, 4000);
 }
 
 async function exchangeToken(code) {
@@ -1196,6 +1216,33 @@ function updateBaselineBanner() {
   banner.innerHTML = `📊 <strong>Your baseline:</strong> ~${avgMpw.toFixed(0)} mi/week (last 2 weeks) · Max safe next week: <strong>${maxSafe} mi</strong> · Plan generated to match your actual fitness.`;
 }
 
+// Goal-time minimums per distance (in seconds)
+const GOAL_TIME_MINS = { 'Marathon': 2*3600, 'Half Marathon': 55*60, '10K': 25*60 };
+const GOAL_TIME_LABELS = { 'Marathon': '2:00:00', 'Half Marathon': '0:55:00', '10K': '0:25:00' };
+
+function validateGoalTime() {
+  const dist = document.getElementById('plan-goal')?.value || 'Marathon';
+  const h = parseInt(document.getElementById('plan-goal-h')?.value) || 0;
+  const m = parseInt(document.getElementById('plan-goal-m')?.value) || 0;
+  const s = parseInt(document.getElementById('plan-goal-s')?.value) || 0;
+  const totalSec = h * 3600 + m * 60 + s;
+  const warn = document.getElementById('goal-time-warn');
+  if (!warn) return;
+  if (totalSec > 0 && totalSec < GOAL_TIME_MINS[dist]) {
+    warn.textContent = `⚠ ${dist} goal time can't be under ${GOAL_TIME_LABELS[dist]}`;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+
+function getGoalTimeStr() {
+  const h = parseInt(document.getElementById('plan-goal-h')?.value) || 0;
+  const m = parseInt(document.getElementById('plan-goal-m')?.value) || 0;
+  const s = parseInt(document.getElementById('plan-goal-s')?.value) || 0;
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
 function generatePlan() {
   const recent = getRecentRunsForPlan();
   const ctx = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB.getPlanContext(recent) : '';
@@ -1260,7 +1307,20 @@ function generatePlan() {
   document.getElementById('week-total').textContent = total.toFixed(0) + ' mi';
   APP._currentWeek = 1;
   APP._currentPhilPlan = plan;
-  document.getElementById('plan-week-title').textContent = `Week 1 of 16 — Base Building`;
+  document.getElementById('plan-week-title').textContent = `${getWeekDateLabel(1)} — Base Building`;
+}
+
+function getWeekDateLabel(weekNum) {
+  // Week 1 = current week (anchored to this Monday)
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7; // 0=Mon
+  const thisMonday = new Date(now);
+  thisMonday.setDate(now.getDate() - dow + (weekNum - 1) * 7);
+  thisMonday.setHours(0,0,0,0);
+  const sunday = new Date(thisMonday);
+  sunday.setDate(thisMonday.getDate() + 6);
+  const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(thisMonday)} – ${fmt(sunday)}`;
 }
 
 function changeWeek(dir) {
@@ -1269,7 +1329,7 @@ function changeWeek(dir) {
   const phases = ['Base Building','Base Building','Base Building','Base Building','Base Building',
     'Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev','Lactate Dev',
     'Race Specific','Race Specific','Race Specific','Taper','Taper'];
-  document.getElementById('plan-week-title').textContent = `Week ${APP._currentWeek} of 16 — ${phases[APP._currentWeek-1]}`;
+  document.getElementById('plan-week-title').textContent = `${getWeekDateLabel(APP._currentWeek)} — ${phases[APP._currentWeek-1]}`;
   // Re-render with slight variation per week
   const weekScale = APP._currentWeek <= 5 ? 0.85 + APP._currentWeek*0.03 :
                     APP._currentWeek <= 11 ? 1.0 + (APP._currentWeek-5)*0.02 :
@@ -1338,7 +1398,7 @@ function renderMonthlyPlan() {
       const total = plan.reduce((s,d) => s + (parseFloat(d.dist)||0)*scale, 0);
       return `<div style="margin-bottom:8px;">
         <div style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between;">
-          <span>WK ${wk}</span><span style="color:var(--accent);">${Math.round(total)} mi</span>
+          <span>${getWeekDateLabel(wk)}</span><span style="color:var(--accent);">${Math.round(total)} mi</span>
         </div>
         <div style="display:flex;gap:2px;">${daysHtml}</div>
       </div>`;
@@ -1928,7 +1988,9 @@ ${weeklyContext}
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
 
-Give a SHORT post-workout reaction — 2-3 sentences max. Reference the actual numbers. If the weekly volume is low for this point in the week, or there's been a multi-day gap, acknowledge it directly — ask what's going on, if they're sick, tired, busy. Don't ignore red flags. No exclamation points. No fluff. End with ONE question.`;
+Give a SHORT post-workout reaction — 2-3 sentences max. Reference the actual numbers. If the weekly volume is low for this point in the week, or there's been a multi-day gap, acknowledge it directly — ask what's going on, if they're sick, tired, busy. Don't ignore red flags. No exclamation points. No fluff. End with ONE question.
+
+IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity, heat, or environmental conditions unless the actual temperature or weather data is present in the activity data. If the run name references a city or location, do not assume weather conditions based on season or month — conditions vary widely. Only comment on conditions if concrete data supports it.`;
 
   try {
     const res = await fetch('/api/claude', {

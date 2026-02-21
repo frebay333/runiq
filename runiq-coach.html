@@ -423,7 +423,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
           <!-- RIGHT: Coach internal notes (private, athlete doesn't see) -->
           <div style="display:flex;flex-direction:column;overflow:hidden;">
             <div style="padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);">Coach Notes</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text);">Coach Chat</div>
               <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">Private — athlete never sees this</div>
             </div>
             <div id="coach-notes-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;"></div>
@@ -1011,7 +1011,10 @@ function renderRunTable(tbodyId, runs) {
   tbody.innerHTML = '';
   (runs || []).forEach(r => {
     const notDone = !r.done && r.dist === '—';
-    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:#fc4c02;font-family:IBM Plex Mono,monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>` : '—';
+    const stravaLink = r.stravaId
+      ? `<a href="https://www.strava.com/activities/${r.stravaId}" target="_blank" style="color:#fc4c02;font-family:IBM Plex Mono,monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>`
+      : (r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:#fc4c02;font-family:IBM Plex Mono,monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>`
+      : (r.done && r.dist !== '—' ? '<span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">no link</span>' : '—'));
     tbody.innerHTML += `<tr style="${notDone?'opacity:0.45;':''}">
       <td style="font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--muted);">${r.day}</td>
       <td style="${notDone?'font-style:italic;color:var(--muted);':''}">${r.name}</td>
@@ -1019,7 +1022,7 @@ function renderRunTable(tbodyId, runs) {
       <td style="font-family:IBM Plex Mono,monospace;font-size:12px;">${r.dist}</td>
       <td style="font-family:IBM Plex Mono,monospace;font-size:12px;${r.pace!=='—'?'':'color:var(--muted);'}">${r.pace !== '—' ? r.pace+' /mi' : '—'}</td>
       <td style="font-family:IBM Plex Mono,monospace;font-size:12px;${parseInt(r.hr)>170?'color:var(--red);':''}">${r.hr !== '—' ? r.hr+' bpm' : '—'}</td>
-      <td style="font-size:11px;color:var(--muted);">${r.note}</td>
+      <td style="font-size:11px;">${stravaLink}</td>
     </tr>`;
   });
 }
@@ -1127,6 +1130,20 @@ function populateMemoryUI(mem) {
   // Populate goal time
   const goalTimeEl = document.getElementById('mem-goal-time');
   if (goalTimeEl && mem.goalTime) goalTimeEl.value = mem.goalTime;
+
+  // Sync goal/race from memory back to currentAthlete so overview header + roster stay in sync
+  if (currentAthlete) {
+    if (mem.goal) currentAthlete.goal = mem.goal;
+    if (mem.targetRace) currentAthlete.nextRaceDate = mem.targetRace;
+    if (mem.targetDate) currentAthlete.nextRaceDate = mem.targetDate;
+    if (mem.goalTime) currentAthlete.estTime = mem.goalTime;
+    // Re-render the overview header with updated info
+    const hdrEl = document.getElementById('overview-athlete-name');
+    if (hdrEl) {
+      hdrEl.innerHTML = `${currentAthlete.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${currentAthlete.goal || '—'} · ${currentAthlete.nextRaceDate || '—'} · Est. ${currentAthlete.estTime || '—'}</span>`;
+    }
+    renderRoster();
+  }
 
   // Sync coachNotes to local state for messaging tab
   if (mem.coachNotes && mem.coachNotes.length && currentAthlete) {
@@ -1502,7 +1519,7 @@ function editRxDay(dayKey) {
 
         <div style="display:flex;gap:10px;">
           <button onclick="document.getElementById('rx-edit-overlay').style.display='none'" style="flex:1;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;cursor:pointer;color:var(--muted);">Cancel</button>
-          <button onclick="saveRxDayEdit('${dayKey}')" style="flex:2;padding:10px;background:var(--accent);border:none;border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:600;cursor:pointer;color:#fff;">Save Day →</button>
+          <button onclick="saveRxDayEdit('${dayKey}')" style="flex:2;padding:10px;background:var(--accent);border:none;border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:600;cursor:pointer;color:#fff;">Save ${dayNames[dayKey]} Workout →</button>
         </div>
       </div>
     `;
@@ -1722,7 +1739,15 @@ async function approveAndPush() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ athleteId: a.id, action: 'approve_push', prescription: currentRxPlan })
     });
-    if (!res.ok) throw new Error('Push failed: ' + res.status);
+    if (!res.ok) {
+      let errMsg = `Push failed: ${res.status}`;
+      try {
+        const errData = await res.json();
+        if (errData.error) errMsg += ` — ${errData.error}`;
+        if (errData.details) errMsg += `: ${errData.details}`;
+      } catch(e2) {}
+      throw new Error(errMsg);
+    }
     currentRxPlan.status = 'pushed';
     updateRxStatus('pushed');
     document.getElementById('rx-pushed-confirm').style.display = 'block';
@@ -1731,7 +1756,7 @@ async function approveAndPush() {
   } catch(e) {
     btn.textContent = 'Error — retry';
     btn.disabled = false;
-    addRxMsg('ai', 'Push failed: ' + e.message);
+    addRxMsg('ai', e.message);
   }
 }
 
@@ -1915,19 +1940,33 @@ function renderCoachNotesThread() {
   });
 }
 
-function addCoachThreadNote() {
+async function addCoachThreadNote() {
   const input = document.getElementById('coach-note-input');
   if (!input?.value.trim() || !currentAthlete) return;
   if (!athleteCoachNotes[currentAthlete.id]) athleteCoachNotes[currentAthlete.id] = [];
   const note = { note: input.value.trim(), date: new Date().toISOString(), author: 'coach' };
   athleteCoachNotes[currentAthlete.id].push(note);
+  const savedText = input.value.trim();
   input.value = '';
-  // Also save to KV memory
-  fetch('/api/athlete-memory', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ athleteId: currentAthlete.id, action: 'add_note', data: note })
-  }).catch(() => {});
   renderCoachNotesThread();
+  // Save to KV memory with error feedback
+  try {
+    const res = await fetch('/api/athlete-memory', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ athleteId: currentAthlete.id, action: 'add_note', data: note })
+    });
+    if (!res.ok) throw new Error('Save failed: ' + res.status);
+    // Refresh from KV to confirm
+    loadAthleteMemory();
+  } catch(e) {
+    console.error('Coach note save failed:', e);
+    // Show error inline
+    const container = document.getElementById('coach-notes-thread');
+    const errEl = document.createElement('div');
+    errEl.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:9px;color:#ef4444;padding:4px 8px;';
+    errEl.textContent = '⚠ Note saved locally but sync failed — check API connection';
+    container.appendChild(errEl);
+  }
 }
 
 async function sendCoachDM() {
