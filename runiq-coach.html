@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.5</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.6</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -854,6 +854,7 @@ function filterRoster(v) { renderRoster(v); }
 // ══════════════════════════════════════
 function loadAthlete(a) {
   currentAthlete = a;
+  // Don't clear cache - keep it for quick switching back
   renderRoster();
   renderOverview();
   renderMessaging();
@@ -1098,14 +1099,22 @@ function renderInstructions() {
 }
 
 let _currentMemory = null;
+const _memoryCache = {}; // cache per athleteId to reduce KV reads
 
-async function loadAthleteMemory() {
+async function loadAthleteMemory(forceRefresh = false) {
   const a = currentAthlete;
   if (!a) return;
+  // Return cached version unless forced refresh
+  if (!forceRefresh && _memoryCache[a.id]) {
+    _currentMemory = _memoryCache[a.id];
+    populateMemoryUI(_currentMemory);
+    return;
+  }
   try {
     const res = await fetch(`/api/athlete-memory?athleteId=${a.id}`);
     const mem = await res.json();
     _currentMemory = mem;
+    _memoryCache[a.id] = mem; // cache it
     populateMemoryUI(mem);
   } catch(e) {
     document.getElementById('memory-status-text').textContent = 'Failed to load memory.';
@@ -1213,7 +1222,7 @@ async function saveMemoryProfile() {
     loadGoalVsEstimate();
     btn.textContent = '✓ Saved';
     setTimeout(() => { btn.textContent = 'Save Profile →'; }, 2000);
-    loadAthleteMemory();
+    delete _memoryCache[currentAthlete?.id]; loadAthleteMemory(true);
   } catch(e) { btn.textContent = 'Error — try again'; }
 }
 
@@ -1228,7 +1237,7 @@ async function addCoachNote() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ athleteId: a.id, action: 'add_note', data: { note, author: 'Coach' } })
   });
-  loadAthleteMemory();
+  delete _memoryCache[a?.id]; loadAthleteMemory(true);
 }
 
 async function deleteCoachNote(index) {
@@ -1239,7 +1248,7 @@ async function deleteCoachNote(index) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ athleteId: a.id, action: 'delete_note', data: { index } })
   });
-  loadAthleteMemory();
+  delete _memoryCache[a?.id]; loadAthleteMemory(true);
 }
 
 async function addInjury() {
@@ -1253,7 +1262,7 @@ async function addInjury() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ athleteId: a.id, action: 'add_injury', data: { injury } })
   });
-  loadAthleteMemory();
+  delete _memoryCache[a?.id]; loadAthleteMemory(true);
 }
 
 async function removeInjury(injury) {
@@ -1264,7 +1273,7 @@ async function removeInjury(injury) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ athleteId: a.id, action: 'remove_injury', data: { injury } })
   });
-  loadAthleteMemory();
+  delete _memoryCache[a?.id]; loadAthleteMemory(true);
 }
 
 
@@ -1986,7 +1995,7 @@ async function addCoachThreadNote() {
     });
     if (!res.ok) throw new Error('Save failed: ' + res.status);
     // Refresh from KV to confirm
-    loadAthleteMemory();
+    delete _memoryCache[currentAthlete?.id]; loadAthleteMemory(true);
   } catch(e) {
     console.error('Coach note save failed:', e);
     // Show error inline
