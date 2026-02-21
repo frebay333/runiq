@@ -1,3 +1,4 @@
+// api/callback.js — v0.6.2
 // api/callback.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
