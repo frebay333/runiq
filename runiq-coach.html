@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.4</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.5</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -584,11 +584,17 @@ async function loadAthletesFromKV() {
 
       if (validIndex.length) {
         // Step 2: fetch full athlete data for each valid entry
-        const fullAthletes = await Promise.all(validIndex.map((a, i) =>
-          fetch(`/api/athlete-sync?athleteId=${a.id}`)
-            .then(r => r.ok ? r.json() : validIndex[i])
-            .catch(() => validIndex[i])
-        ));
+        const fullAthletes = await Promise.all(validIndex.map(async (a, i) => {
+          try {
+            const r = await fetch(`/api/athlete-sync?athleteId=${a.id}`);
+            if (!r.ok) return validIndex[i];
+            let d = await r.json();
+            // Handle double-encoded string response
+            if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e) {} }
+            if (typeof d === 'string') { try { d = JSON.parse(d); } catch(e) {} }
+            return d;
+          } catch(e) { return validIndex[i]; }
+        }));
 
         const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
         ATHLETES = fullAthletes.map((a, i) => {
