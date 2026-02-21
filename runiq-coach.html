@@ -926,7 +926,7 @@ function renderRunTable(tbodyId, runs) {
   tbody.innerHTML = '';
   (runs || []).forEach(r => {
     const notDone = !r.done && r.dist === '—';
-    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(232,255,71,.3);padding:2px 6px;border-radius:2px;">↗ STRAVA</a>` : '—';
+    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:#fc4c02;font-family:'IBM Plex Mono',monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>` : '—';
     tbody.innerHTML += `<tr style="${notDone?'opacity:0.45;':''}">
       <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">${r.day}</td>
       <td style="${notDone?'font-style:italic;color:var(--muted);':''}">${r.name}</td>
