@@ -22,28 +22,59 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: data.message || 'Token exchange failed' });
     }
 
-    // Store tokens in Upstash KV using correct REST format: /set/key/value
+    // Write athlete data to KV immediately on OAuth so coach portal has the record
     const KV_URL   = process.env.UPSTASH_REDIS_REST_URL;
     const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
     if (KV_URL && KV_TOKEN && data.athlete) {
-      const aid = data.athlete.id;
+      const aid  = data.athlete.id;
       const name = `${data.athlete.firstname} ${data.athlete.lastname}`;
+      const now  = new Date().toISOString();
 
-      const tokenVal = encodeURIComponent(JSON.stringify({
+      const kvSet = async (key, value) => {
+        const payload = typeof value === 'string' ? value : JSON.stringify(value);
+        await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      };
+
+      // Write full athlete record (fetched by coach portal per-athlete lookup)
+      const athleteRecord = {
+        id: aid,
+        firstname: data.athlete.firstname,
+        lastname:  data.athlete.lastname,
+        name,
+        profile:        data.athlete.profile,
+        profile_medium: data.athlete.profile_medium,
+        city:    data.athlete.city,
+        country: data.athlete.country,
+        lastSync: now,
+        activities: []   // will be filled in by syncAthleteToKV from frontend
+      };
+
+      // Write athlete-index record (used by coach roster list)
+      const indexRecord = {
+        id: aid,
+        name,
+        lastSync: now,
+        runCount: 0
+      };
+
+      // Write tokens
+      const tokenRecord = {
         athleteId: aid, athleteName: name,
-        access_token: data.access_token,
+        access_token:  data.access_token,
         refresh_token: data.refresh_token,
-        expires_at: data.expires_at,
-        connectedAt: new Date().toISOString()
-      }));
-
-      const indexVal = encodeURIComponent(JSON.stringify({
-        id: aid, name, lastSync: new Date().toISOString(), runCount: 0
-      }));
+        expires_at:    data.expires_at,
+        connectedAt:   now
+      };
 
       await Promise.all([
-        fetch(`${KV_URL}/set/tokens:${aid}/${tokenVal}`, { method: 'POST', headers: { Authorization: `Bearer ${KV_TOKEN}` } }),
-        fetch(`${KV_URL}/set/athlete-index:${aid}/${indexVal}`, { method: 'POST', headers: { Authorization: `Bearer ${KV_TOKEN}` } })
+        kvSet(`athlete:${aid}`,       athleteRecord),
+        kvSet(`athlete-index:${aid}`, indexRecord),
+        kvSet(`tokens:${aid}`,        tokenRecord),
       ]).catch(e => console.warn('KV store failed:', e));
     }
 
