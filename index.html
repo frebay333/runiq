@@ -331,7 +331,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.2</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.5</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -377,7 +377,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.2</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.5</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -965,7 +965,7 @@ function coachLoginFromHome() {
 
 // ── KV SYNC ──────────────────────────────────────────────────
 async function syncAthleteToKV() {
-  if (!APP.athlete) return;
+  if (!APP.athlete || !APP.activities.length) return;
   try {
     await fetch('/api/athlete-sync', {
       method: 'POST',
@@ -2124,7 +2124,10 @@ async function loadPrescribedWeek() {
 
   try {
     const res = await fetch(`/api/prescription?athleteId=${APP.athlete.id}&current=true`);
-    const rx = await res.json();
+    let rx = await res.json();
+    // Handle double-encoded string response from KV
+    if (typeof rx === 'string') { try { rx = JSON.parse(rx); } catch(e) {} }
+    if (typeof rx === 'string') { try { rx = JSON.parse(rx); } catch(e) {} }
     if (rx && !rx.empty) {
       APP_RX = rx;
       renderRxSidebar(rx);
