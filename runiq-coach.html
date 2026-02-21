@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.1</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.2</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -572,33 +572,49 @@ async function loadAthletesFromKV() {
     const kvAthletes = await res.json();
 
     if (kvAthletes && kvAthletes.length) {
-      // Step 2: fetch full athlete data (with activities) for each
-      const fullAthletes = await Promise.all(kvAthletes.map(a =>
-        fetch(`/api/athlete-sync?athleteId=${a.id}`).then(r => r.json()).catch(() => a)
-      ));
+      // Filter out corrupt index entries with no valid id
+      const validIndex = kvAthletes.filter(a => a && a.id && String(a.id) !== 'undefined');
 
-      const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
-      ATHLETES = fullAthletes.map((a, i) => ({
-        id: a.id,
-        name: a.name || ((a.firstname && a.lastname) ? (a.firstname + ' ' + a.lastname) : (a.firstname || a.lastname || ('Athlete ' + a.id))),
-        initials: ((a.name || a.firstname || 'A') + ' ' + (a.lastname || '')).trim().split(' ').filter(Boolean).map(n=>n[0]).join('').slice(0,2).toUpperCase() || '??',
-        color: colors[i % colors.length],
-        goal: 'Marathon',
-        flag: 'green',
-        nextRaceDate: 'TBD',
-        estTime: '—',
-        activities: a.activities || [],
-        lastSync: a.lastSync,
-        coachNotes: [],
-        aiInstructions: [],
-        restrictions: []
-      }));
+      if (validIndex.length) {
+        // Step 2: fetch full athlete data for each valid entry
+        const fullAthletes = await Promise.all(validIndex.map((a, i) =>
+          fetch(`/api/athlete-sync?athleteId=${a.id}`)
+            .then(r => r.ok ? r.json() : validIndex[i])
+            .catch(() => validIndex[i])
+        ));
 
-      initAthleteState();
-      currentAthlete = ATHLETES[0];
-      renderRoster();
-      if (ATHLETES.length) loadAthlete(ATHLETES[0]);
-      return;
+        const colors = ['#e8ff47','#3dff8f','#ff4d2e','#00cfff'];
+        ATHLETES = fullAthletes.map((a, i) => {
+          const idx = validIndex[i];
+          const fullName = a.name
+            || (a.firstname && a.lastname ? a.firstname + ' ' + a.lastname : null)
+            || a.firstname || a.lastname
+            || idx?.name
+            || ('Athlete ' + (a.id || idx?.id || (i+1)));
+          const initials = fullName.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0,2).toUpperCase() || '??';
+          return {
+            id: a.id || idx?.id,
+            name: fullName,
+            initials,
+            color: colors[i % colors.length],
+            goal: 'Marathon',
+            flag: 'green',
+            nextRaceDate: 'TBD',
+            estTime: '—',
+            activities: a.activities || [],
+            lastSync: a.lastSync,
+            coachNotes: [],
+            aiInstructions: [],
+            restrictions: []
+          };
+        });
+
+        initAthleteState();
+        currentAthlete = ATHLETES[0];
+        renderRoster();
+        if (ATHLETES.length) loadAthlete(ATHLETES[0]);
+        return;
+      }
     }
   } catch(e) {
     console.warn('KV load failed, using demo data:', e);
