@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.2</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.3</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -1653,7 +1653,7 @@ async function generateRxDraft() {
     if (planMatch) {
       try {
         const plan = JSON.parse(planMatch[1].trim());
-        plan.weekStart = plan.weekStart || getNextMonday();
+        plan.weekStart = getNextMonday(); // always force correct date, never trust AI-generated weekStart
         plan.aiReasoning = reasoningMatch ? reasoningMatch[1].trim() : '';
         plan.status = 'draft';
         currentRxPlan = plan;
@@ -1747,7 +1747,7 @@ async function approveAndPush() {
   btn.disabled = true;
   try {
     // First save the latest plan state as draft
-    currentRxPlan.weekStart = currentRxPlan.weekStart || getNextMonday();
+    currentRxPlan.weekStart = getNextMonday(); // always force correct date
     await saveDraft(true);
     // Then mark as pushed
     const res = await fetch('/api/prescription', {
