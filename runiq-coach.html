@@ -1599,8 +1599,7 @@ function addRxMsg(role, text) {
     <div class="collab-av ${isAI ? 'ai-av' : 'coach-av'}">${isAI ? '🤖' : '👨‍💼'}</div>
     <div>
       <div class="collab-sender ${isAI ? 'ai-s' : 'coach-s'}">${isAI ? 'AI Assistant' : 'Coach Mike'}</div>
-      <div class="collab-bubble">${text.replace(/
-/g, '<br>')}</div>
+      <div class="collab-bubble">${text.replace(/\n/g, '<br>')}</div>
     </div>
   `;
   container.appendChild(el);
@@ -1617,8 +1616,6 @@ function handleRxChatKey(e) {
 }
 
 // ── LEGACY COLLAB (kept for reference) ──
-let collabHistory = [];
-let collabPlan = null;
 
 // ══════════════════════════════════════
 // TABS
