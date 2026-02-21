@@ -236,6 +236,39 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .pushed-badge{display:none;text-align:center;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green);border:1px solid rgba(77,255,145,.2);border-radius:var(--r);background:rgba(77,255,145,.05);}
 .pushed-badge.visible{display:block;}
 
+/* ── RX WORKOUTS TAB ── */
+.rx-layout{display:grid;grid-template-columns:1fr 320px;height:100%;gap:0;overflow:hidden;}
+.rx-left{padding:20px;overflow-y:auto;border-right:1px solid var(--border);}
+.rx-right{display:flex;flex-direction:column;overflow:hidden;}
+.rx-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+.rx-day-card{background:var(--s1);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
+.rx-day-card:hover{border-color:var(--border2);}
+.rx-day-header{display:grid;grid-template-columns:52px 1fr auto auto;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;}
+.rx-day-name{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.rx-day-label{font-size:13px;font-weight:500;}
+.rx-day-dist{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.rx-day-type{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;}
+.rx-day-type.easy{background:rgba(77,255,145,.1);color:var(--green);border:1px solid rgba(77,255,145,.2);}
+.rx-day-type.tempo{background:rgba(77,166,255,.1);color:var(--blue);border:1px solid rgba(77,166,255,.2);}
+.rx-day-type.vo2{background:rgba(255,77,77,.1);color:var(--red);border:1px solid rgba(255,77,77,.2);}
+.rx-day-type.long{background:rgba(232,255,71,.1);color:var(--accent);border:1px solid rgba(232,255,71,.2);}
+.rx-day-type.rest{background:var(--s2);color:var(--muted);border:1px solid var(--border);}
+.rx-day-body{padding:0 14px 12px;border-top:1px solid var(--border);display:none;}
+.rx-day-card.expanded .rx-day-body{display:block;}
+.rx-segment-row{display:grid;grid-template-columns:80px 40px 1fr;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.rx-segment-row:last-child{border:none;}
+.rx-seg-type{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;}
+.rx-seg-dist{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);}
+.rx-coach-note{font-size:11px;color:var(--orange);margin-top:8px;padding:6px 10px;background:rgba(255,159,67,.06);border-radius:4px;line-height:1.5;}
+.grade-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;}
+.grade-A{background:rgba(77,255,145,.15);color:var(--green);border:1px solid rgba(77,255,145,.3);}
+.grade-B{background:rgba(77,166,255,.15);color:var(--blue);border:1px solid rgba(77,166,255,.3);}
+.grade-C{background:rgba(255,159,67,.15);color:var(--orange);border:1px solid rgba(255,159,67,.3);}
+.grade-D,.grade-F{background:rgba(255,77,77,.12);color:var(--red);border:1px solid rgba(255,77,77,.25);}
+.rx-edit-input{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;width:100%;}
+.rx-edit-input:focus{outline:none;border-color:var(--accent);}
+
+
 /* typing */
 .collab-typing{display:none;align-self:flex-start;gap:10px;}
 .collab-typing.visible{display:flex;}
@@ -321,9 +354,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
         <div class="detail-tab active" onclick="switchTab('overview',this)">Overview</div>
         <div class="detail-tab" onclick="switchTab('chat',this)">Chat History</div>
         <div class="detail-tab" onclick="switchTab('instructions',this)">AI Instructions</div>
-        <div class="detail-tab" onclick="switchTab('collab',this)">
-          🤝 Weekly Plan Collab
-        </div>
+        <div class="detail-tab" onclick="switchTab('rx',this)">📋 Rx Workouts</div>
       </div>
 
       <!-- ── TAB: OVERVIEW ── -->
@@ -437,42 +468,56 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
         </div>
       </div>
 
-      <!-- ── TAB: COLLAB ── -->
-      <div class="tab-content" id="tab-collab">
-        <div class="collab-layout">
+      <!-- ── TAB: RX WORKOUTS ── -->
+      <div class="tab-content" id="tab-rx">
+        <div class="rx-layout">
 
-          <!-- Chat -->
-          <div class="collab-chat">
-            <div class="collab-header">
-              <div class="collab-title">Coach × AI Collaboration</div>
-              <div class="collab-badge ai">🤖 AI</div>
-              <div class="collab-badge coach">👨‍💼 You</div>
-              <button class="btn btn-ghost" style="margin-left:auto;padding:5px 12px;font-size:9px;" onclick="startCollabSession()">↺ New Session</button>
+          <!-- LEFT: AI Draft + Chat -->
+          <div class="rx-left">
+            <div class="rx-header">
+              <div>
+                <div class="section-title" style="margin-bottom:2px;">Weekly Prescription</div>
+                <div id="rx-phase-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:1px;"></div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div id="rx-status-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.3);color:var(--orange);">DRAFT</div>
+                <button class="btn btn-ghost" style="font-size:9px;padding:5px 12px;" onclick="generateRxDraft()">🤖 AI Draft</button>
+              </div>
             </div>
-            <div class="collab-messages" id="collab-messages"></div>
-            <div class="collab-typing" id="collab-typing">
+
+            <!-- AI Reasoning -->
+            <div id="rx-reasoning" style="display:none;background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.2);border-radius:6px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--text);">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:2px;margin-bottom:8px;">🤖 AI REASONING</div>
+              <div id="rx-reasoning-text"></div>
+            </div>
+
+            <!-- 7-Day Prescription Grid -->
+            <div id="rx-days-grid"></div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;gap:10px;margin-top:16px;" id="rx-actions" style="display:none;">
+              <button class="btn" style="flex:1;justify-content:center;background:rgba(255,255,255,.05);border:1px solid var(--border2);color:var(--muted);" onclick="saveDraft()">💾 Save Draft</button>
+              <button class="btn" id="rx-approve-btn" style="flex:2;justify-content:center;background:var(--accent);color:#000;font-weight:600;" onclick="approveAndPush()">📤 Approve & Push to Athlete</button>
+            </div>
+            <div id="rx-pushed-confirm" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);padding:10px;text-align:center;border:1px solid rgba(77,255,145,.2);border-radius:6px;margin-top:12px;">✓ PLAN PUSHED — athlete will see it on next open</div>
+          </div>
+
+          <!-- RIGHT: AI Chat for refinement -->
+          <div class="rx-right">
+            <div class="collab-header">
+              <div class="collab-title" style="font-size:12px;">Refine with AI</div>
+              <button class="btn btn-ghost" style="margin-left:auto;font-size:9px;padding:4px 10px;" onclick="clearRxChat()">↺ Reset</button>
+            </div>
+            <div class="collab-messages" id="rx-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:0;"></div>
+            <div class="collab-typing" id="rx-typing">
               <div class="collab-av ai-av">🤖</div>
               <div class="ct-dots"><div class="ct-dot"></div><div class="ct-dot"></div><div class="ct-dot"></div></div>
             </div>
             <div class="collab-input-area">
-              <textarea class="collab-input" id="collab-input" rows="1" placeholder="Give AI direction for next week's plan..." onkeydown="handleCollabKey(event)" oninput="autoResizeCollab(this)"></textarea>
-              <button class="collab-send" onclick="sendCollabMessage()">↑</button>
+              <textarea class="collab-input" id="rx-chat-input" rows="1" placeholder="e.g. Make Tuesday easier, move long run to Sunday..." onkeydown="handleRxChatKey(event)" oninput="autoResizeCollab(this)"></textarea>
+              <button class="collab-send" onclick="sendRxChat()">↑</button>
             </div>
           </div>
-
-          <!-- Plan output -->
-          <div class="plan-output" id="plan-output">
-            <div class="plan-output-header">
-              <div class="po-title" id="plan-week-title">Next Week's Plan</div>
-              <div class="po-sub" id="plan-week-sub">Collaborate with AI to generate →</div>
-            </div>
-            <div id="plan-days"></div>
-            <button class="push-plan-btn" id="push-btn" disabled onclick="pushPlan()">
-              📤 Push Plan to Athlete
-            </button>
-            <div class="pushed-badge" id="pushed-badge">✓ Plan pushed to Vu's app</div>
-          </div>
-
         </div>
       </div>
 
@@ -1157,236 +1202,436 @@ function addRestriction() {
 }
 
 // ══════════════════════════════════════
-// COLLAB SESSION
+// RX WORKOUTS SYSTEM
 // ══════════════════════════════════════
-async function startCollabSession() {
-  collabHistory = [];
-  collabPlan = null;
-  const msgs = document.getElementById('collab-messages');
-  msgs.innerHTML = '';
-  document.getElementById('plan-days').innerHTML = '';
-  document.getElementById('push-btn').disabled = true;
-  document.getElementById('pushed-badge').classList.remove('visible');
-  document.getElementById('plan-week-sub').textContent = 'Generating with AI...';
+let currentRxPlan = null;
+let rxChatHistory = [];
 
-  showCollabTyping();
+function getNextMonday() {
+  const d = new Date();
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow + 7);
+  d.setHours(0,0,0,0);
+  return d.toISOString().split('T')[0];
+}
 
+function getDayLabel(isoDate) {
+  // isoDate = YYYY-MM-DD
+  const d = new Date(isoDate + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+async function loadRxTab() {
   const a = currentAthlete;
-  const instructions = athleteInstructions[a.id];
-  const restrictions = athleteRestrictions[a.id];
+  if (!a) return;
 
-  // Build recent runs for KB plan context
-  const recentRunsForKB = [
-    ...(a.currentWeekRuns || a.runs || []),
-    ...(a.prevWeekRuns || [])
-  ].filter(r => r.done && r.dist !== '—').map(r => ({
-    name: r.name,
-    distanceMi: parseFloat(r.dist) || 0,
-    pace: r.pace,
-  }));
+  // Show phase info
+  const mem = await fetchMemory(a.id);
+  const weeklyMiHistory = buildWeeklyMiHistory(a);
+  const phaseInfo = typeof RUNIQ_KB !== 'undefined'
+    ? RUNIQ_KB.inferPhase(mem?.targetDate || null, weeklyMiHistory)
+    : { phase: 'base', weeksToRace: null, description: 'Base building' };
 
-  const planCtx = typeof RUNIQ_KB !== 'undefined'
-    ? RUNIQ_KB.getPlanContext(recentRunsForKB)
-    : `Athlete baseline: ~${a.stats.weeklyMiDone || a.stats.weeklyMi} mi/week. Apply 10% rule.`;
+  const badge = document.getElementById('rx-phase-badge');
+  if (badge) {
+    badge.textContent = phaseInfo.description.toUpperCase()
+      + (phaseInfo.weeksToRace ? ` · ${phaseInfo.weeksToRace} WEEKS TO RACE` : '');
+  }
 
-  const systemPrompt = `You are an elite running coach's AI assistant in a private backroom collaboration. You are talking directly to Coach Mike (not the athlete). Your job is to review last week's training data and propose next week's plan collaboratively.
-
-Be concise and professional. Lead with a brief analysis of last week (2-3 sentences), flag any concerns, then propose next week's plan structure. Wait for the coach's direction before generating the full detailed plan.
-
-Athlete: ${a.name}
-Goal: ${a.goal}
-Last week summary: ${a.aiSummary}
-Standing instructions: ${instructions.join('; ')}
-Restrictions: ${restrictions.join('; ') || 'None'}
-Current week runs: ${(a.currentWeekRuns || a.runs || []).map(r => `${r.day}: ${r.name} (${r.dist}, ${r.pace}/mi)`).join(' | ')}
-Previous week runs: ${(a.prevWeekRuns || []).map(r => `${r.day}: ${r.name} (${r.dist}, ${r.pace}/mi)`).join(' | ')}
-
-${planCtx}`;
-
+  // Try to load existing prescription
   try {
-    const resp = await fetch('/api/claude', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
-        system: systemPrompt,
-        messages:[{role:'user', content:`Coach Mike here. Let's review ${a.name}'s week and build next week's plan.`}]
-      })
-    });
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || 'Error.';
-    hideCollabTyping();
-    addCollabMsg('ai', text);
-    collabHistory.push({role:'user', content:`Coach Mike here. Let's review ${a.name}'s week and build next week's plan.`});
-    collabHistory.push({role:'assistant', content:text});
-    document.getElementById('plan-week-sub').textContent = 'Chat with AI to refine →';
+    const res = await fetch(`/api/prescription?athleteId=${a.id}&current=true`);
+    const rx = await res.json();
+    if (rx && !rx.empty) {
+      currentRxPlan = rx;
+      renderRxGrid(rx);
+      updateRxStatus(rx.status);
+      if (rx.aiReasoning) {
+        document.getElementById('rx-reasoning-text').textContent = rx.aiReasoning;
+        document.getElementById('rx-reasoning').style.display = 'block';
+      }
+      document.getElementById('rx-actions').style.display = 'flex';
+    } else {
+      renderEmptyRxGrid();
+    }
   } catch(e) {
-    hideCollabTyping();
-    addCollabMsg('ai', `Ready to review ${a.name}'s week with you, Coach. Last week showed ${a.flag==='red'?'some concerning trends worth discussing':'solid progress across all sessions'}. What direction do you want to take for next week?`);
+    renderEmptyRxGrid();
   }
 }
 
-async function sendCollabMessage() {
-  const input = document.getElementById('collab-input');
+function buildWeeklyMiHistory(a) {
+  // Build array of last 3 weeks of mileage from activities
+  const acts = a.activities || [];
+  const result = [];
+  for (let w = 2; w >= 0; w--) {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;
+    const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() - dow - w*7); weekEnd.setHours(23,59,59,0);
+    const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
+    const mi = acts
+      .filter(x => { const t = new Date(x.start_date); return t >= weekStart && t <= weekEnd; })
+      .reduce((s,x) => s + (x.distance||0)/1609.34, 0);
+    result.push(Math.round(mi * 10) / 10);
+  }
+  return result;
+}
+
+async function fetchMemory(athleteId) {
+  try {
+    const res = await fetch(`/api/athlete-memory?athleteId=${athleteId}`);
+    return await res.json();
+  } catch(e) { return null; }
+}
+
+function renderEmptyRxGrid() {
+  const grid = document.getElementById('rx-days-grid');
+  grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px dashed var(--border);border-radius:8px;">
+    NO PRESCRIPTION FOR NEXT WEEK YET<br><br>
+    <span style="font-size:10px;">Click "🤖 AI Draft" to generate, or build manually</span>
+  </div>`;
+  document.getElementById('rx-actions').style.display = 'none';
+}
+
+function renderRxGrid(rx) {
+  const grid = document.getElementById('rx-days-grid');
+  if (!rx || !rx.days) { renderEmptyRxGrid(); return; }
+
+  const dayOrder = ['mon','tue','wed','thu','fri','sat','sun'];
+  const dayNames = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
+
+  grid.innerHTML = '';
+  dayOrder.forEach(dayKey => {
+    const day = rx.days[dayKey] || { type: 'rest' };
+    const isRest = day.type === 'rest' || !day.segments;
+    const segs = day.segments || [];
+    const hasGrade = day.grade !== undefined;
+
+    const card = document.createElement('div');
+    card.className = 'rx-day-card';
+    card.id = `rx-card-${dayKey}`;
+
+    const gradeHtml = hasGrade
+      ? `<div class="grade-badge grade-${day.letter || gradeToLetter(day.grade)}">${day.letter || gradeToLetter(day.grade)}</div>`
+      : '';
+
+    const distHtml = day.totalDist ? `<span class="rx-day-dist">${day.totalDist} mi</span>` : '';
+
+    card.innerHTML = `
+      <div class="rx-day-header" onclick="toggleRxDay('${dayKey}')">
+        <div class="rx-day-name">${dayNames[dayKey]}</div>
+        <div class="rx-day-label">${isRest ? '— Rest' : (day.label || 'Workout')}</div>
+        ${distHtml}
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${gradeHtml}
+          <div class="rx-day-type ${day.type || 'rest'}">${day.type || 'rest'}</div>
+        </div>
+      </div>
+      <div class="rx-day-body">
+        ${isRest ? '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Recovery day — no running.</div>' : renderSegments(segs, dayKey)}
+        ${day.coachNote ? `<div class="rx-coach-note">📝 ${day.coachNote}</div>` : ''}
+        ${day.completedAt ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);margin-top:8px;">✓ COMPLETED ${new Date(day.completedAt).toLocaleDateString()}</div>` : ''}
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button onclick="editRxDay('${dayKey}')" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 10px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;">✏ Edit</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('rx-actions').style.display = 'flex';
+}
+
+function renderSegments(segs, dayKey) {
+  if (!segs.length) return '';
+  return `<div style="margin-bottom:8px;">` + segs.map((s,i) => `
+    <div class="rx-segment-row">
+      <div class="rx-seg-type">${s.type}</div>
+      <div class="rx-seg-dist">${s.dist}mi</div>
+      <div style="font-size:11px;color:var(--muted);">${s.intensity || ''}</div>
+    </div>
+  `).join('') + '</div>';
+}
+
+function gradeToLetter(g) {
+  return g >= 90 ? 'A' : g >= 80 ? 'B' : g >= 70 ? 'C' : g >= 60 ? 'D' : 'F';
+}
+
+function toggleRxDay(dayKey) {
+  const card = document.getElementById(`rx-card-${dayKey}`);
+  if (card) card.classList.toggle('expanded');
+}
+
+function editRxDay(dayKey) {
+  const day = currentRxPlan?.days?.[dayKey];
+  if (!day) return;
+  const note = prompt(`Coach note for ${dayKey.toUpperCase()}:`, day.coachNote || '');
+  if (note !== null) {
+    if (!currentRxPlan.days[dayKey]) currentRxPlan.days[dayKey] = {};
+    currentRxPlan.days[dayKey].coachNote = note;
+    renderRxGrid(currentRxPlan);
+  }
+}
+
+function updateRxStatus(status) {
+  const badge = document.getElementById('rx-status-badge');
+  if (!badge) return;
+  const styles = {
+    draft: 'rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.3);color:var(--orange)',
+    pushed: 'rgba(77,255,145,.1);border:1px solid rgba(77,255,145,.3);color:var(--green)',
+    approved: 'rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.3);color:var(--blue)'
+  };
+  badge.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:${styles[status] || styles.draft}`;
+  badge.textContent = (status || 'DRAFT').toUpperCase();
+}
+
+async function generateRxDraft() {
+  const a = currentAthlete;
+  if (!a) return;
+
+  const btn = document.querySelector('[onclick="generateRxDraft()"]');
+  btn.textContent = '⏳ Drafting...';
+  btn.disabled = true;
+
+  document.getElementById('rx-reasoning').style.display = 'none';
+  document.getElementById('rx-days-grid').innerHTML = `<div style="text-align:center;padding:32px;color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:10px;">GENERATING AI DRAFT...</div>`;
+
+  try {
+    const mem = await fetchMemory(a.id);
+    const weeklyMiHistory = buildWeeklyMiHistory(a);
+    const phaseInfo = typeof RUNIQ_KB !== 'undefined'
+      ? RUNIQ_KB.inferPhase(mem?.targetDate || null, weeklyMiHistory)
+      : { phase: 'base', weeksToRace: null, description: 'Base building' };
+
+    // Build last 3 weeks data
+    const lastThreeWeeks = buildLast3WeeksData(a);
+
+    const systemPrompt = typeof RUNIQ_KB !== 'undefined'
+      ? RUNIQ_KB.getRxDraftPrompt(a, lastThreeWeeks, mem, phaseInfo)
+      : `You are an AI running coach. Generate a 7-day workout prescription for ${a.name} in JSON format with a <REASONING> and <PLAN> block.`;
+
+    const resp = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Generate next week's full prescription for ${a.name}.` }],
+        athleteId: a.id
+      })
+    });
+
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || '';
+
+    // Parse reasoning
+    const reasoningMatch = text.match(/<REASONING>([\s\S]*?)<\/REASONING>/);
+    const planMatch = text.match(/<PLAN>([\s\S]*?)<\/PLAN>/);
+
+    if (reasoningMatch) {
+      document.getElementById('rx-reasoning-text').textContent = reasoningMatch[1].trim();
+      document.getElementById('rx-reasoning').style.display = 'block';
+    }
+
+    if (planMatch) {
+      try {
+        const plan = JSON.parse(planMatch[1].trim());
+        plan.weekStart = plan.weekStart || getNextMonday();
+        plan.aiReasoning = reasoningMatch ? reasoningMatch[1].trim() : '';
+        plan.status = 'draft';
+        currentRxPlan = plan;
+        renderRxGrid(plan);
+        updateRxStatus('draft');
+
+        // Auto-save draft
+        await saveDraft(true);
+
+        // Add to rx chat
+        addRxMsg('ai', `Draft ready for ${a.name}. ${reasoningMatch ? reasoningMatch[1].trim().split('.')[0] + '.' : ''} Review the plan and make any edits, then approve when ready.`);
+        rxChatHistory.push({ role: 'assistant', content: text });
+      } catch(e) {
+        document.getElementById('rx-days-grid').innerHTML = `<div style="color:var(--red);padding:20px;font-size:12px;">Failed to parse AI plan. Try again.</div>`;
+      }
+    } else {
+      addRxMsg('ai', text);
+      rxChatHistory.push({ role: 'user', content: `Generate next week's full prescription for ${a.name}.` });
+      rxChatHistory.push({ role: 'assistant', content: text });
+      renderEmptyRxGrid();
+    }
+  } catch(e) {
+    document.getElementById('rx-days-grid').innerHTML = `<div style="color:var(--red);padding:20px;font-size:12px;">Error generating draft: ${e.message}</div>`;
+  }
+
+  btn.textContent = '🤖 AI Draft';
+  btn.disabled = false;
+}
+
+function buildLast3WeeksData(a) {
+  const acts = a.activities || [];
+  const weeks = [];
+  for (let w = 2; w >= 0; w--) {
+    const now = new Date();
+    const dow = (now.getDay() + 6) % 7;
+    const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() - dow - w*7); weekEnd.setHours(23,59,59,0);
+    const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
+    const wkActs = acts.filter(x => { const t = new Date(x.start_date); return t >= weekStart && t <= weekEnd; });
+    weeks.push({
+      runs: wkActs.map(x => ({
+        name: x.name,
+        distanceMi: Math.round((x.distance||0)/1609.34 * 10)/10,
+        pace: x.moving_time && x.distance ? Math.round(x.moving_time / (x.distance/1609.34)) : null,
+        grade: x._grade || null
+      }))
+    });
+  }
+  return weeks;
+}
+
+async function saveDraft(silent = false) {
+  const a = currentAthlete;
+  if (!a || !currentRxPlan) return;
+  try {
+    await fetch('/api/prescription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ athleteId: a.id, action: 'save_draft', prescription: currentRxPlan })
+    });
+    if (!silent) {
+      const btn = document.querySelector('[onclick="saveDraft()"]');
+      btn.textContent = '✓ Saved';
+      setTimeout(() => { btn.textContent = '💾 Save Draft'; }, 2000);
+    }
+  } catch(e) { if (!silent) alert('Save failed: ' + e.message); }
+}
+
+async function approveAndPush() {
+  const a = currentAthlete;
+  if (!a || !currentRxPlan) return;
+  const btn = document.getElementById('rx-approve-btn');
+  btn.textContent = 'Pushing...';
+  btn.disabled = true;
+  try {
+    await fetch('/api/prescription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ athleteId: a.id, action: 'approve_push', prescription: currentRxPlan })
+    });
+    updateRxStatus('pushed');
+    document.getElementById('rx-pushed-confirm').style.display = 'block';
+    document.getElementById('rx-actions').style.display = 'none';
+    addRxMsg('ai', `Plan pushed to ${a.name}'s app. They'll see the full week's prescription on next open. I'll track completion and grade each workout.`);
+    currentRxPlan.status = 'pushed';
+  } catch(e) {
+    btn.textContent = 'Error — retry';
+    btn.disabled = false;
+  }
+}
+
+async function sendRxChat() {
+  const input = document.getElementById('rx-chat-input');
   const text = input.value.trim();
-  if(!text) return;
+  if (!text || !currentAthlete) return;
   input.value = '';
   input.style.height = 'auto';
 
-  addCollabMsg('coach', text);
-  collabHistory.push({role:'user', content: text});
+  addRxMsg('coach', text);
+  rxChatHistory.push({ role: 'user', content: text });
 
-  showCollabTyping();
+  document.getElementById('rx-typing').classList.add('visible');
 
   const a = currentAthlete;
-  const instructions = athleteInstructions[a.id];
-  const restrictions = athleteRestrictions[a.id];
+  const mem = await fetchMemory(a.id);
+  const weeklyMiHistory = buildWeeklyMiHistory(a);
+  const phaseInfo = typeof RUNIQ_KB !== 'undefined'
+    ? RUNIQ_KB.inferPhase(mem?.targetDate || null, weeklyMiHistory)
+    : { phase: 'base', weeksToRace: null, description: 'Base' };
 
-  const planCtxSend = typeof RUNIQ_KB !== 'undefined'
-    ? RUNIQ_KB.getPlanContext([...(a.currentWeekRuns || a.runs || []), ...(a.prevWeekRuns || [])]
-        .filter(r => r.done && r.dist !== '—')
-        .map(r => ({ name: r.name, distanceMi: parseFloat(r.dist) || 0 })))
-    : '';
-
-  const systemPrompt = `You are an elite running coach's AI assistant in a private backroom collaboration with Coach Mike.
-
-Athlete: ${a.name}, Goal: ${a.goal}
-Standing instructions: ${instructions.join('; ')}
-Restrictions: ${restrictions.join('; ') || 'None'}
-Current week: ${(a.currentWeekRuns || a.runs || []).map(r => `${r.day}: ${r.dist}`).join(' | ')}
-Previous week: ${(a.prevWeekRuns || []).map(r => `${r.day}: ${r.dist}`).join(' | ')}
-${planCtxSend}
-
-When the coach asks you to generate or finalize the plan, respond with the plan in this EXACT JSON format embedded in your response (so I can parse it):
-<PLAN>
-{
-  "weekTitle": "Week X — Phase Name",
-  "days": [
-    {"day":"Mon","workout":"Rest","type":"rest","dist":"","detail":""},
-    {"day":"Tue","workout":"Name","type":"easy|tempo|vo2|long|rest","dist":"X mi","detail":"Specific instructions"}
-  ]
-}
-</PLAN>
-
-Otherwise respond conversationally as a knowledgeable assistant coach. Be direct and professional with Coach Mike.`;
+  const systemPrompt = `You are an AI running coach assistant collaborating with Coach Mike to refine a weekly prescription for ${a.name}. Current plan: ${JSON.stringify(currentRxPlan?.days || {}, null, 2)}. Phase: ${phaseInfo.phase}. If the coach asks to change a workout, respond with the updated plan using <PLAN>...</PLAN> tags in the same JSON format. Otherwise respond conversationally. Be concise and direct.`;
 
   try {
     const resp = await fetch('/api/claude', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1500,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
         system: systemPrompt,
-        messages: collabHistory
+        messages: rxChatHistory,
+        athleteId: a.id
       })
     });
     const data = await resp.json();
     const reply = data.content?.[0]?.text || 'Error.';
-    hideCollabTyping();
+    document.getElementById('rx-typing').classList.remove('visible');
 
-    // Parse plan if present
     const planMatch = reply.match(/<PLAN>([\s\S]*?)<\/PLAN>/);
     const displayText = reply.replace(/<PLAN>[\s\S]*?<\/PLAN>/g, '').trim();
 
-    if(displayText) addCollabMsg('ai', displayText);
-    collabHistory.push({role:'assistant', content:reply});
+    if (displayText) addRxMsg('ai', displayText);
+    rxChatHistory.push({ role: 'assistant', content: reply });
 
-    if(planMatch) {
+    if (planMatch) {
       try {
-        const plan = JSON.parse(planMatch[1].trim());
-        collabPlan = plan;
-        renderPlanOutput(plan);
-        document.getElementById('push-btn').disabled = false;
+        const updatedPlan = JSON.parse(planMatch[1].trim());
+        if (currentRxPlan) {
+          currentRxPlan.days = updatedPlan.days || updatedPlan;
+          if (updatedPlan.totalMiles) currentRxPlan.totalMiles = updatedPlan.totalMiles;
+        } else {
+          currentRxPlan = updatedPlan;
+          currentRxPlan.weekStart = getNextMonday();
+        }
+        renderRxGrid(currentRxPlan);
+        document.getElementById('rx-actions').style.display = 'flex';
       } catch(e) {}
     }
   } catch(e) {
-    hideCollabTyping();
-    addCollabMsg('ai', 'Connection issue — please try again.');
+    document.getElementById('rx-typing').classList.remove('visible');
+    addRxMsg('ai', 'Connection issue — try again.');
   }
 }
 
-function renderPlanOutput(plan) {
-  const container = document.getElementById('plan-days');
-  container.innerHTML = '';
-  document.getElementById('plan-week-title').textContent = plan.weekTitle || "Next Week's Plan";
-  document.getElementById('plan-week-sub').textContent = `${currentAthlete.name} · Ready to push`;
-
-  const typeColors = {easy:'var(--muted)',tempo:'var(--blue)',vo2:'var(--red)',long:'var(--accent)',rest:'var(--muted2)'};
-
-  plan.days.forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'plan-day fade-up';
-    el.innerHTML = `
-      <div class="pd-day">${d.day}</div>
-      <div class="pd-content">
-        <div class="pd-type run-type ${d.type}">${d.type}</div>
-        <div class="pd-workout">${d.workout}</div>
-        ${d.detail?`<div class="pd-detail">${d.detail}</div>`:''}
-        ${d.dist?`<div class="pd-dist">${d.dist}</div>`:''}
-      </div>
-    `;
-    container.appendChild(el);
-  });
-}
-
-function pushPlan() {
-  const btn = document.getElementById('push-btn');
-  btn.disabled = true;
-  btn.textContent = 'Pushing...';
-  setTimeout(() => {
-    btn.style.display = 'none';
-    document.getElementById('pushed-badge').classList.add('visible');
-    addCollabMsg('ai', `✅ Plan pushed to ${currentAthlete.name}'s app. They'll see it when they open RunIQ. I'll monitor execution and flag any deviations.`);
-    collabHistory.push({role:'user', content:'Please confirm the plan has been pushed to the athlete.'});
-    collabHistory.push({role:'assistant', content:`Plan pushed to ${currentAthlete.name}'s app.`});
-  }, 1200);
-}
-
-// ── COLLAB HELPERS ──
-function addCollabMsg(role, text) {
-  const container = document.getElementById('collab-messages');
+function addRxMsg(role, text) {
+  const container = document.getElementById('rx-chat-messages');
   const el = document.createElement('div');
-  el.className = `collab-msg ${role==='ai'?'ai-msg':'coach-msg'}`;
+  el.className = `collab-msg ${role === 'ai' ? 'ai-msg' : 'coach-msg'}`;
   const isAI = role === 'ai';
   el.innerHTML = `
-    <div class="collab-av ${isAI?'ai-av':'coach-av'}">${isAI?'🤖':'👨‍💼'}</div>
+    <div class="collab-av ${isAI ? 'ai-av' : 'coach-av'}">${isAI ? '🤖' : '👨‍💼'}</div>
     <div>
-      <div class="collab-sender ${isAI?'ai-s':'coach-s'}">${isAI?'AI Assistant':'Coach Mike'}</div>
-      <div class="collab-bubble">${text.replace(/\n/g,'<br>')}</div>
+      <div class="collab-sender ${isAI ? 'ai-s' : 'coach-s'}">${isAI ? 'AI Assistant' : 'Coach Mike'}</div>
+      <div class="collab-bubble">${text.replace(/
+/g, '<br>')}</div>
     </div>
   `;
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
 }
 
-function showCollabTyping() {
-  const el = document.getElementById('collab-typing');
-  el.classList.add('visible');
-  document.getElementById('collab-messages').scrollTop = 999999;
+function clearRxChat() {
+  rxChatHistory = [];
+  document.getElementById('rx-chat-messages').innerHTML = '';
 }
-function hideCollabTyping() {
-  document.getElementById('collab-typing').classList.remove('visible');
+
+function handleRxChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendRxChat(); }
 }
-function handleCollabKey(e) {
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCollabMessage();}
-}
-function autoResizeCollab(el) {
-  el.style.height='auto';
-  el.style.height=Math.min(el.scrollHeight,100)+'px';
-}
+
+// ── LEGACY COLLAB (kept for reference) ──
+let collabHistory = [];
+let collabPlan = null;
 
 // ══════════════════════════════════════
 // TABS
 // ══════════════════════════════════════
 function switchTab(id, el) {
-  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('tab-'+id).classList.add('active');
-  if(id==='collab' && collabHistory.length===0) startCollabSession();
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'rx') loadRxTab();
+  if (id === 'instructions') renderInstructions();
 }
+
 </script>
 </body>
 </html>

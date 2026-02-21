@@ -58,6 +58,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--text);backd
 .athlete-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
 .nav-coach-link{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--muted);padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);text-decoration:none;transition:all .2s;}
 .nav-coach-link:hover{color:var(--orange);border-color:rgba(255,159,67,.3);}
+.settings-wrap{position:relative;}
+.settings-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;width:260px;background:var(--s1);border:1px solid var(--border2);border-radius:8px;padding:14px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.settings-dropdown.open{display:block;}
+.settings-section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.settings-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;margin-bottom:6px;transition:border-color .2s;}
+.settings-input:focus{border-color:var(--accent);}
+.settings-divider{height:1px;background:var(--border);margin:10px 0;}
+.settings-persona-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:4px;cursor:pointer;font-size:12px;transition:background .15s;}
+.settings-persona-opt:hover{background:var(--s2);}
+.settings-persona-opt.active{background:rgba(37,99,235,.08);color:var(--accent);}
+.settings-btn-strava{width:100%;background:transparent;border:1px solid var(--border);border-radius:4px;padding:7px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;transition:all .2s;margin-top:4px;}
+.settings-btn-strava:hover{border-color:var(--accent2);color:var(--accent2);}
 
 /* ── PAGES ── */
 .page{display:none;padding-top:52px;min-height:100vh;}
@@ -162,6 +174,29 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 
 /* Workout history */
 .workout-history{flex:1;overflow-y:auto;padding:10px;}
+/* ── RX WEEKLY PANEL ── */
+.rx-week-toggle{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:rgba(37,99,235,.04);transition:background .15s;}
+.rx-week-toggle:hover{background:rgba(37,99,235,.08);}
+.rx-day-row{padding:9px 14px;border-bottom:1px solid var(--border);cursor:default;transition:background .15s;}
+.rx-day-row.today{border-left:3px solid var(--accent);}
+.rx-day-row.completed{background:rgba(16,185,129,.02);}
+.rx-day-row.missed{background:rgba(239,68,68,.02);}
+.rx-row-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.rx-row-day{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.rx-row-status{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:1px 6px;border-radius:8px;}
+.rx-row-status.upcoming{color:var(--muted);border:1px solid var(--border);}
+.rx-row-status.completed{color:var(--green);border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.05);}
+.rx-row-status.missed{color:var(--accent2);border:1px solid rgba(249,115,22,.3);background:rgba(249,115,22,.05);}
+.rx-row-label{font-size:12px;font-weight:500;margin-bottom:2px;}
+.rx-row-detail{font-size:11px;color:var(--muted);}
+.rx-btn{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;border:none;cursor:pointer;margin-top:5px;margin-right:4px;transition:all .15s;}
+.rx-btn.analyze{background:rgba(37,99,235,.1);color:var(--accent);border:1px solid rgba(37,99,235,.3);}
+.rx-btn.discuss{background:rgba(249,115,22,.08);color:var(--accent2);border:1px solid rgba(249,115,22,.3);}
+.rx-grade{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;}
+.rx-grade.A{color:#10b981;background:rgba(16,185,129,.1);}
+.rx-grade.B{color:var(--accent);background:rgba(37,99,235,.1);}
+.rx-grade.C{color:var(--accent2);background:rgba(249,115,22,.08);}
+.rx-grade.D,.rx-grade.F{color:#ef4444;background:rgba(239,68,68,.08);}
 .history-item{padding:10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:7px;cursor:pointer;transition:all .15s;background:var(--s1);}
 .history-item:hover{border-color:var(--border2);background:var(--s2);}
 .history-item.selected{border-color:var(--accent);background:rgba(232,255,71,.03);}
@@ -296,7 +331,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.5.1</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.0</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -335,12 +370,34 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.5.1</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.0</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
-    <div class="athlete-chip" id="athlete-chip">
-      <div class="dot"></div>
-      <span id="nav-athlete-name">Loading...</span>
+    <div class="settings-wrap" id="settings-wrap">
+      <div class="athlete-chip" id="athlete-chip" onclick="toggleSettings()" style="cursor:pointer;">
+        <div class="dot"></div>
+        <span id="nav-athlete-name">Loading...</span>
+        <span style="font-size:10px;opacity:.6;margin-left:2px;">▾</span>
+      </div>
+      <div class="settings-dropdown" id="settings-dropdown">
+        <div class="settings-section-label">RACE GOAL</div>
+        <input class="settings-input" id="s-race-name" placeholder="Race name (e.g. Boston Marathon)" oninput="debounceSaveSettings()">
+        <input class="settings-input" id="s-race-date" type="date" oninput="debounceSaveSettings()">
+        <select class="settings-input" id="s-race-dist" onchange="debounceSaveSettings()">
+          <option value="">Distance...</option>
+          <option value="5k">5K</option>
+          <option value="10k">10K</option>
+          <option value="half">Half Marathon</option>
+          <option value="marathon">Marathon</option>
+          <option value="ultra">Ultra</option>
+        </select>
+        <div id="s-countdown" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent2);padding:4px 0;"></div>
+        <div class="settings-divider"></div>
+        <div class="settings-section-label">AI COACH PERSONA</div>
+        <div id="settings-persona-list"></div>
+        <div class="settings-divider"></div>
+        <button class="settings-btn-strava" onclick="deauthStrava()">Disconnect Strava</button>
+      </div>
     </div>
   </div>
 </nav>
@@ -537,18 +594,17 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 
     <!-- Left sidebar -->
     <div class="coach-sidebar">
-      <div class="coach-sidebar-header">
-        <div class="sidebar-label">Coach Persona</div>
-        <div class="persona-wrap">
-          <div class="persona-badge" onclick="togglePersonaDD()">
-            <div id="p-icon" style="font-size:18px;">🏡</div>
-            <div style="flex:1"><div id="p-name" style="font-size:13px;font-weight:500;">Armchair JB</div><div id="p-desc" style="font-size:11px;color:var(--muted);">Gives whacked advice</div></div>
-            <span style="color:var(--muted);font-size:11px;">▾</span>
-          </div>
-          <div class="persona-dropdown" id="persona-dd"></div>
+      <!-- Rx Weekly Panel -->
+      <div class="rx-week-toggle" id="rx-week-toggle" onclick="toggleRxPanel()" style="display:none;">
+        <div style="flex:1;">
+          <div class="sidebar-label" style="margin-bottom:1px;">📋 This Week's Prescription</div>
+          <div id="rx-week-summary" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">Loading...</div>
         </div>
+        <span id="rx-toggle-arrow" style="color:var(--muted);font-size:10px;">▼</span>
       </div>
-      <div style="padding:10px 14px 6px;border-bottom:1px solid var(--border);">
+      <div id="rx-week-panel" style="display:none;border-bottom:1px solid var(--border);overflow-y:auto;max-height:320px;"></div>
+      <!-- Recent Workouts -->
+      <div style="padding:10px 14px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <div class="sidebar-label" style="margin-bottom:0;">Recent Workouts</div>
       </div>
       <div class="workout-history" id="workout-history"></div>
@@ -835,7 +891,7 @@ function finalizeApp() {
   const name = APP.athlete ? `${APP.athlete.firstname} ${APP.athlete.lastname}` : 'Athlete';
   document.getElementById('nav-athlete-name').textContent = name;
 
-  // Build persona dropdown from KB
+  // Load settings (persona, race goal, countdown)
   buildPersonaDropdown();
 
   // Sync athlete data to KV (so coach can see it)
@@ -849,6 +905,9 @@ function finalizeApp() {
 
   // Initialize coach page
   buildWorkoutHistory();
+
+  // Load prescribed workouts for the week
+  if (!APP.demoMode) loadPrescribedWeek();
 
   // Show baseline banner on plan page
   updateBaselineBanner();
@@ -1279,50 +1338,127 @@ function renderMonthlyPlan() {
 
 // Build persona dropdown from KB
 function buildPersonaDropdown() {
-  const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
-  const personas = KB ? KB.personas : {
-    drillsergeant:{ id:'drillsergeant', icon:'🪖', name:'Drill Sergeant', desc:'Zero tolerance for excuses' },
-    neighborbob:  { id:'neighborbob',   icon:'🏡', name:'Neighbor Bob',   desc:'Gives whacked advice' },
-    professor:    { id:'professor',     icon:'🔬', name:'The Professor',  desc:'Physiology & biomechanics nerd' },
-    hypeman:      { id:'hypeman',       icon:'🔥', name:'Hype Man',       desc:'Your biggest fan, always lit' },
-    elitepacer:   { id:'elitepacer',    icon:'🏆', name:'Elite Pacer',    desc:'D1 level, no fluff' },
-  };
-  const dd = document.getElementById('persona-dd');
-  dd.innerHTML = '';
-  Object.values(personas).forEach(p => {
-    const el = document.createElement('div');
-    el.className = `persona-opt${p.id === APP.currentPersona ? ' active' : ''}`;
-    el.innerHTML = `<div style="font-size:18px;">${p.icon}</div><div><div style="font-size:12px;font-weight:500;">${p.name}</div><div style="font-size:10px;color:var(--muted);">${p.desc}</div></div>`;
-    el.onclick = () => setPersona(p.id);
-    dd.appendChild(el);
-  });
-  setPersona(APP.currentPersona, true);
+  // Now handled by settings dropdown
+  loadSettings();
+  updateNavCountdown();
 }
 
-function togglePersonaDD() {
-  document.getElementById('persona-dd').classList.toggle('open');
+// ── SETTINGS DROPDOWN ────────────────────────────────────────
+let settingsSaveTimer = null;
+
+function toggleSettings() {
+  document.getElementById('settings-dropdown').classList.toggle('open');
 }
+
 document.addEventListener('click', e => {
-  if (!e.target.closest('.persona-wrap')) document.getElementById('persona-dd')?.classList.remove('open');
+  if (!e.target.closest('.settings-wrap')) {
+    document.getElementById('settings-dropdown')?.classList.remove('open');
+  }
 });
+
+function loadSettings() {
+  const saved = localStorage.getItem('runiq_settings');
+  if (saved) {
+    const s = JSON.parse(saved);
+    if (s.raceName) document.getElementById('s-race-name').value = s.raceName;
+    if (s.raceDate) document.getElementById('s-race-date').value = s.raceDate;
+    if (s.raceDist) document.getElementById('s-race-dist').value = s.raceDist;
+    if (s.persona) APP.currentPersona = s.persona;
+    updateCountdown(s.raceDate);
+  }
+  renderSettingsPersonas();
+}
+
+function debounceSaveSettings() {
+  clearTimeout(settingsSaveTimer);
+  settingsSaveTimer = setTimeout(saveSettings, 600);
+  updateCountdown(document.getElementById('s-race-date').value);
+}
+
+function saveSettings() {
+  const s = {
+    raceName: document.getElementById('s-race-name').value,
+    raceDate: document.getElementById('s-race-date').value,
+    raceDist: document.getElementById('s-race-dist').value,
+    persona: APP.currentPersona
+  };
+  localStorage.setItem('runiq_settings', JSON.stringify(s));
+  // Also save to athlete memory for AI injection
+  if (APP.athlete && s.raceName) {
+    fetch('/api/athlete-memory', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: APP.athlete.id, action: 'set_goal',
+        data: { goal: `${s.raceDist || 'marathon'} — ${s.raceName}`, targetRace: s.raceName, targetDate: s.raceDate }
+      })
+    }).catch(() => {});
+  }
+}
+
+function updateCountdown(raceDate) {
+  const el = document.getElementById('s-countdown');
+  if (!raceDate || !el) return;
+  const weeks = Math.round((new Date(raceDate) - Date.now()) / (7 * 86400000));
+  if (weeks > 0) {
+    el.textContent = `${weeks} weeks to race`;
+  } else if (weeks === 0) {
+    el.textContent = 'Race week!';
+  } else {
+    el.textContent = 'Race passed';
+    el.style.color = 'var(--muted)';
+  }
+}
+
+function renderSettingsPersonas() {
+  const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
+  const personas = KB ? KB.personas : {};
+  const container = document.getElementById('settings-persona-list');
+  if (!container) return;
+  container.innerHTML = '';
+  Object.values(personas).forEach(p => {
+    const el = document.createElement('div');
+    el.className = `settings-persona-opt${APP.currentPersona === p.id ? ' active' : ''}`;
+    el.innerHTML = `<span style="font-size:16px;">${p.icon}</span><div><div style="font-size:12px;font-weight:500;">${p.name}</div><div style="font-size:11px;color:var(--muted);">${p.desc}</div></div>`;
+    el.onclick = () => setPersona(p.id);
+    container.appendChild(el);
+  });
+}
 
 function setPersona(id, silent) {
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
-  const p = personas[id] || { id, icon:'🏡', name:'Neighbor Bob', desc:'Encouraging' };
   APP.currentPersona = id;
-  document.getElementById('p-icon').textContent = p.icon;
-  document.getElementById('p-name').textContent = p.name;
-  document.getElementById('p-desc').textContent = p.desc;
-  document.querySelectorAll('.persona-opt').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.persona-opt').forEach(el => { if (el.textContent.includes(p.name)) el.classList.add('active'); });
-  document.getElementById('persona-dd').classList.remove('open');
+  renderSettingsPersonas();
+  saveSettings();
   if (!silent) {
+    document.getElementById('settings-dropdown').classList.remove('open');
     APP.chatHistory = [];
-    APP.chatInitialized = false;
     document.getElementById('chat-messages').innerHTML = '';
     document.getElementById('suggested-replies').innerHTML = '';
-    setTimeout(() => initCoachChat(), 200);
+    document.getElementById('analyze-bar').style.display = 'flex';
+  }
+}
+
+// Race countdown in nav area
+function updateNavCountdown() {
+  const saved = localStorage.getItem('runiq_settings');
+  if (!saved) return;
+  const s = JSON.parse(saved);
+  if (!s.raceDate || !s.raceName) return;
+  const weeks = Math.round((new Date(s.raceDate) - Date.now()) / (7 * 86400000));
+  if (weeks > 0 && weeks <= 26) {
+    const versionEl = document.querySelector('[style*="v0."]') || document.querySelector('.nav-tabs + div');
+    // Show countdown near nav
+    let countEl = document.getElementById('nav-countdown');
+    if (!countEl) {
+      countEl = document.createElement('div');
+      countEl.id = 'nav-countdown';
+      countEl.style.cssText = 'font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:1px;margin-left:8px;';
+      const nav = document.querySelector('nav');
+      const navRight = document.querySelector('.nav-right');
+      if (nav && navRight) nav.insertBefore(countEl, navRight);
+    }
+    countEl.textContent = `${weeks}wk to ${s.raceName}`;
   }
 }
 
@@ -1342,6 +1478,7 @@ function buildWorkoutHistory() {
     const dateLabel = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
     const el = document.createElement('div');
     el.className = `history-item${i===0?' selected':''}`;
+    el.setAttribute('data-id', a.id);
     el.onclick = () => selectWorkout(a, el);
     el.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -1388,6 +1525,26 @@ async function selectWorkout(activity, el) {
   APP._analyzed = false;
   APP._chatRunning = false;
   renderWorkoutBanner(detailed);
+  // Auto-grade against prescription
+  const gradeResult = checkRxGrade(detailed);
+  if (gradeResult) {
+    // Show grade badge in banner
+    let gradeBadge = document.getElementById('rx-grade-badge');
+    if (!gradeBadge) {
+      gradeBadge = document.createElement('div');
+      gradeBadge.id = 'rx-grade-badge';
+      gradeBadge.style.cssText = "font-family:'IBM Plex Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;";
+      const titleEl = document.getElementById('banner-title');
+      if (titleEl && titleEl.parentNode) titleEl.parentNode.appendChild(gradeBadge);
+    }
+    const letterClass = gradeResult.letter;
+    const colors = {A:'rgba(16,185,129,.1);color:#10b981',B:'rgba(37,99,235,.1);color:var(--accent)',C:'rgba(249,115,22,.08);color:var(--accent2)',D:'rgba(239,68,68,.08);color:#ef4444',F:'rgba(239,68,68,.08);color:#ef4444'};
+    gradeBadge.style.cssText += `background:${colors[letterClass] || colors.F};border:1px solid currentColor;`;
+    gradeBadge.textContent = `Rx: ${gradeResult.letter} (${gradeResult.grade}%)`;
+  } else {
+    const existing = document.getElementById('rx-grade-badge');
+    if (existing) existing.remove();
+  }
   document.getElementById('ping-btn').className = 'ping-btn';
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
@@ -1705,6 +1862,37 @@ async function analyzeWorkout() {
     `${Math.floor((Date.now()-new Date(act.start_date))/86400000)}d ago: ${act.name} — ${actToMi(act).toFixed(1)}mi @ ${fmtPace(actPaceMi(act))}/mi`
   ).join('\n');
 
+  // Weekly pattern analysis
+  const now = Date.now();
+  const dow = (new Date().getDay() + 6) % 7; // Mon=0, Sun=6
+  const weekStartMs = (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - dow); return d.getTime(); })();
+  const thisWeekActs = APP.activities.filter(x => new Date(x.start_date).getTime() >= weekStartMs);
+  const lastWeekActs = APP.activities.filter(x => {
+    const t = new Date(x.start_date).getTime();
+    return t >= weekStartMs - 7*86400000 && t < weekStartMs;
+  });
+  const thisWeekMi = thisWeekActs.reduce((s,x) => s + actToMi(x), 0).toFixed(1);
+  const lastWeekMi = lastWeekActs.reduce((s,x) => s + actToMi(x), 0).toFixed(1);
+  const daysSinceLastRun = APP.activities.length > 1
+    ? Math.floor((now - new Date(APP.activities[1].start_date).getTime()) / 86400000)
+    : null;
+  const daysIntoWeek = dow + 1; // 1=Mon, 7=Sun
+  const expectedRunsByNow = Math.round(daysIntoWeek * 5 / 7); // assume ~5 runs/week
+  const weeklyFlag = thisWeekActs.length < expectedRunsByNow - 1
+    ? `LOW VOLUME ALERT: Only ${thisWeekActs.length} run(s) this week (${daysIntoWeek} days in). Last week was ${lastWeekMi} miles.`
+    : null;
+  const gapFlag = daysSinceLastRun !== null && daysSinceLastRun >= 3
+    ? `GAP ALERT: ${daysSinceLastRun} days since previous run.`
+    : null;
+
+  const weeklyContext = [
+    `THIS WEEK (${daysIntoWeek} days in): ${thisWeekActs.length} run(s), ${thisWeekMi} miles`,
+    `LAST WEEK: ${lastWeekActs.length} run(s), ${lastWeekMi} miles`,
+    daysSinceLastRun !== null ? `DAYS SINCE PREV RUN: ${daysSinceLastRun}` : null,
+    weeklyFlag,
+    gapFlag
+  ].filter(Boolean).join('\n');
+
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
@@ -1714,10 +1902,13 @@ async function analyzeWorkout() {
 WORKOUT JUST COMPLETED:
 ${workoutDetail}
 
+WEEKLY TRAINING PATTERN:
+${weeklyContext}
+
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
 
-Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No exclamation points. No fluff. Reference 1-2 specific numbers. End with ONE question.`;
+Give a SHORT post-workout reaction — 2-3 sentences max. Reference the actual numbers. If the weekly volume is low for this point in the week, or there's been a multi-day gap, acknowledge it directly — ask what's going on, if they're sick, tired, busy. Don't ignore red flags. No exclamation points. No fluff. End with ONE question.`;
 
   try {
     const res = await fetch('/api/claude', {
@@ -1779,9 +1970,11 @@ async function sendMessage() {
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
+  const thisWeekActsSend = APP.activities.filter(x => new Date(x.start_date).getTime() >= (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (new Date().getDay()+6)%7); return d.getTime(); })());
   const systemPrompt = `${p.prompt}
 
 WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPaceMi(a))}/mi${a.average_heartrate ? `, HR ${Math.round(a.average_heartrate)}bpm avg` : ''}.
+THIS WEEK: ${thisWeekActsSend.length} run(s), ${thisWeekActsSend.reduce((s,x)=>s+actToMi(x),0).toFixed(1)} miles.
 RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.`;
 
   try {
@@ -1825,6 +2018,187 @@ async function autoSaveWorkoutSummary(workout, firstAiResponse) {
       })
     });
   } catch(e) { console.warn('Memory save failed:', e); }
+}
+
+// ── PRESCRIBED WORKOUTS ─────────────────────────────────────
+let APP_RX = null;
+
+async function loadPrescribedWeek() {
+  if (!APP.athlete) return;
+  try {
+    const res = await fetch(`/api/prescription?athleteId=${APP.athlete.id}&current=true`);
+    const rx = await res.json();
+    if (rx && !rx.empty) {
+      APP_RX = rx;
+      renderRxSidebar(rx);
+    }
+  } catch(e) { /* no prescription yet, silent fail */ }
+}
+
+function toggleRxPanel() {
+  const panel = document.getElementById('rx-week-panel');
+  const arrow = document.getElementById('rx-toggle-arrow');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function renderRxSidebar(rx) {
+  if (!rx || !rx.days) return;
+
+  // Show toggle
+  const toggle = document.getElementById('rx-week-toggle');
+  toggle.style.display = 'flex';
+
+  // Week summary
+  const totalMi = rx.totalMiles || Object.values(rx.days)
+    .filter(d => d.totalDist).reduce((s,d) => s + (d.totalDist||0), 0);
+  const weekOf = rx.weekStart ? new Date(rx.weekStart + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  document.getElementById('rx-week-summary').textContent =
+    `${totalMi.toFixed ? totalMi.toFixed(0) : totalMi}mi · week of ${weekOf}`;
+
+  const panel = document.getElementById('rx-week-panel');
+  panel.innerHTML = '';
+
+  const dayOrder = ['mon','tue','wed','thu','fri','sat','sun'];
+  const dayNames = {mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday',sun:'Sunday'};
+
+  // Get today's day key
+  const todayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+  const weekStartMs = rx.weekStart ? new Date(rx.weekStart + 'T00:00:00').getTime() : null;
+
+  dayOrder.forEach(dayKey => {
+    const day = rx.days[dayKey];
+    if (!day) return;
+
+    const isRest = day.type === 'rest' || !day.label;
+    if (isRest) return; // skip rest days in sidebar
+
+    // Determine status
+    const isToday = dayKey === todayKey;
+    const isPast = weekStartMs ? (() => {
+      const dayIdx = dayOrder.indexOf(dayKey);
+      const dayMs = weekStartMs + dayIdx * 86400000;
+      return dayMs < Date.now() - 86400000; // past if before yesterday
+    })() : false;
+    const isCompleted = day.completed;
+    const isMissed = isPast && !isCompleted;
+
+    let statusClass = 'upcoming';
+    let statusLabel = isToday ? 'TODAY' : 'UPCOMING';
+    if (isCompleted) { statusClass = 'completed'; statusLabel = `${day.letter || day.grade || '✓'}`; }
+    else if (isMissed) { statusClass = 'missed'; statusLabel = 'MISSED'; }
+
+    const row = document.createElement('div');
+    row.className = `rx-day-row${isToday?' today':''}${isCompleted?' completed':isMissed?' missed':''}`;
+
+    const segs = day.segments || [];
+    const segSummary = segs.map(s => `${s.dist}mi ${s.type}`).join(', ');
+
+    const gradeHtml = isCompleted && day.grade
+      ? `<span class="rx-grade ${day.letter || gradeToLetter(day.grade)}">${day.letter || gradeToLetter(day.grade)}</span>`
+      : `<span class="rx-row-status ${statusClass}">${statusLabel}</span>`;
+
+    const btnHtml = !isRest && rx.status === 'pushed' ? `
+      ${isCompleted
+        ? `<button class="rx-btn analyze" onclick="rxAnalyze('${dayKey}')">⚡ Analyze</button>`
+        : `<button class="rx-btn discuss" onclick="rxDiscuss('${dayKey}')">💬 Discuss</button>`
+      }` : '';
+
+    row.innerHTML = `
+      <div class="rx-row-head">
+        <div class="rx-row-day">${dayNames[dayKey]}</div>
+        ${gradeHtml}
+      </div>
+      <div class="rx-row-label">${day.label || 'Workout'}</div>
+      <div class="rx-row-detail">${day.totalDist ? day.totalDist + ' mi' : ''}${segSummary ? ' · ' + segSummary : ''}</div>
+      ${day.coachNote ? `<div style="font-size:10px;color:var(--accent2);margin-top:3px;">📝 ${day.coachNote}</div>` : ''}
+      ${btnHtml}
+    `;
+    panel.appendChild(row);
+  });
+
+  // Auto-open if there's a today entry
+  if (rx.days[todayKey] && rx.days[todayKey].type !== 'rest') {
+    document.getElementById('rx-week-panel').style.display = 'block';
+    document.getElementById('rx-toggle-arrow').textContent = '▲';
+  }
+}
+
+function gradeToLetter(g) {
+  return g >= 90 ? 'A' : g >= 80 ? 'B' : g >= 70 ? 'C' : g >= 60 ? 'D' : 'F';
+}
+
+function rxAnalyze(dayKey) {
+  // Switch to coach tab and trigger analyze for matching workout
+  showPage('coach', document.querySelector('[onclick*="coach"]'));
+  const day = APP_RX?.days?.[dayKey];
+  if (!day) return;
+  // Find the most recent workout matching this day
+  const dayIdx = ['sun','mon','tue','wed','thu','fri','sat'].indexOf(dayKey);
+  const match = APP.activities.find(a => new Date(a.start_date).getDay() === dayIdx);
+  if (match) {
+    const el = document.querySelector(`.history-item[data-id="${match.id}"]`);
+    if (el) el.click();
+    else analyzeWorkout();
+  }
+}
+
+function rxDiscuss(dayKey) {
+  // Switch to coach tab with discuss context
+  showPage('coach', document.querySelector('[onclick*="coach"]'));
+  const day = APP_RX?.days?.[dayKey];
+  if (!day) return;
+
+  // Pre-fill chat with discuss context
+  setTimeout(() => {
+    const input = document.getElementById('chat-input');
+    if (input) {
+      input.value = `I want to discuss ${day.label || 'my prescribed workout'} for ${dayKey}`;
+      input.focus();
+    }
+  }, 300);
+}
+
+// Auto-grade when a workout is selected that matches a prescription
+function checkRxGrade(activity) {
+  if (!APP_RX || !activity || APP.demoMode) return null;
+  const dayIdx = new Date(activity.start_date).getDay();
+  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][dayIdx];
+  const prescribed = APP_RX.days?.[dayKey];
+  if (!prescribed || prescribed.type === 'rest') return null;
+
+  const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
+  if (!KB) return null;
+
+  const gradeResult = KB.gradeWorkout(prescribed, activity);
+  if (!gradeResult) return null;
+
+  // Save grade to KV
+  fetch('/api/prescription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      athleteId: APP.athlete.id,
+      action: 'update_completion',
+      day: dayKey,
+      activityId: activity.id,
+      grade: gradeResult.grade,
+      gradeBreakdown: gradeResult.breakdown,
+      prescription: APP_RX
+    })
+  }).catch(() => {});
+
+  // Update local cache
+  if (APP_RX.days[dayKey]) {
+    APP_RX.days[dayKey].completed = true;
+    APP_RX.days[dayKey].grade = gradeResult.grade;
+    APP_RX.days[dayKey].letter = gradeResult.letter;
+    APP_RX.days[dayKey].activityId = activity.id;
+    renderRxSidebar(APP_RX);
+  }
+
+  return gradeResult;
 }
 
 function pingCoach() {
