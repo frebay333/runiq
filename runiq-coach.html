@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.3</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.4</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -572,8 +572,15 @@ async function loadAthletesFromKV() {
     const kvAthletes = await res.json();
 
     if (kvAthletes && kvAthletes.length) {
+      // Normalize each entry - handle array-wrapping and double-encoding from old KV format
+      const normalized = kvAthletes.map(a => {
+        if (typeof a === 'string') { try { a = JSON.parse(a); } catch(e) { return null; } }
+        if (Array.isArray(a)) a = a[0];
+        if (typeof a === 'string') { try { a = JSON.parse(a); } catch(e) { return null; } }
+        return a;
+      }).filter(Boolean);
       // Filter out corrupt index entries with no valid id
-      const validIndex = kvAthletes.filter(a => a && a.id && String(a.id) !== 'undefined');
+      const validIndex = normalized.filter(a => a && a.id && String(a.id) !== 'undefined');
 
       if (validIndex.length) {
         // Step 2: fetch full athlete data for each valid entry
