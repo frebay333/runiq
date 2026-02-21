@@ -193,11 +193,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .hz{font-family:'DM Mono',monospace;font-size:8px;padding:2px 6px;border-radius:2px;}
 
 /* Pace breakdown */
-.pace-breakdown{padding:8px 20px;border-bottom:1px solid var(--border);display:none;flex-wrap:wrap;gap:6px;}
-.pace-breakdown.visible{display:flex;}
-.pb-split{font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;background:var(--s2);border:1px solid var(--border);border-radius:2px;}
-.pb-split.fast{border-color:rgba(61,255,143,.3);color:var(--green);}
-.pb-split.slow{border-color:rgba(255,77,46,.3);color:var(--accent2);}
+.pace-breakdown{padding:10px 20px;border-bottom:1px solid var(--border);display:none;}
+.pace-breakdown.visible{display:block;}
+.pb-splits-table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:10px;}
+.pb-splits-table th{color:var(--muted);font-size:8px;letter-spacing:1px;text-align:left;padding:2px 8px 6px 0;border-bottom:1px solid var(--border);}
+.pb-splits-table td{padding:4px 8px 4px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.pb-split.fast{color:var(--green);}
+.pb-split.slow{color:var(--accent2);}
 
 /* Chat */
 .chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;}
@@ -1426,24 +1428,31 @@ function renderWorkoutBanner(a) {
 
 function renderPaceBreakdown(a) {
   const wrap = document.getElementById('pace-breakdown');
-  const laps = a.laps || [];
+  const laps = (a.laps || []).filter(l => l.distance && l.distance > 200);
   if (!laps.length) { wrap.classList.remove('visible'); return; }
   wrap.classList.add('visible');
-  wrap.innerHTML = '<span style="font-family:\'DM Mono\',monospace;font-size:8px;color:var(--muted);margin-right:4px;">SPLITS</span>';
   const avgPace = actPaceMi(a);
+  let rows = '';
   laps.forEach((lap, i) => {
-    if (!lap.distance || lap.distance < 200) return;
     const lapMi = lap.distance / 1609.34;
-    const lapPace = lap.elapsed_time / lapMi;
+    const lapPace = lap.moving_time ? lap.moving_time / lapMi : lap.elapsed_time / lapMi;
     const diff = lapPace - avgPace;
     const isFast = diff < -10;
     const isSlow = diff > 10;
-    const el = document.createElement('span');
-    el.className = `pb-split${isFast?' fast':isSlow?' slow':''}`;
-    el.textContent = `Mi ${i+1}: ${fmtPace(lapPace)}`;
-    el.title = `Lap ${i+1}: ${fmtPace(lapPace)}/mi · HR ${lap.average_heartrate||'—'} bpm`;
-    wrap.appendChild(el);
+    const cls = isFast ? 'fast' : isSlow ? 'slow' : '';
+    const hr = lap.average_heartrate ? Math.round(lap.average_heartrate) + ' bpm' : '—';
+    const elev = lap.total_elevation_gain !== undefined ? (lap.total_elevation_gain > 0 ? '+' : '') + Math.round(lap.total_elevation_gain) + ' ft' : '—';
+    rows += `<tr>
+      <td>${i+1}</td>
+      <td class="pb-split ${cls}">${fmtPace(lapPace)}<span style="font-size:8px;color:var(--muted);"> /mi</span></td>
+      <td style="color:var(--muted);">${hr}</td>
+      <td style="color:var(--muted);">${elev}</td>
+    </tr>`;
   });
+  wrap.innerHTML = `<table class="pb-splits-table">
+    <thead><tr><th>MI</th><th>PACE</th><th>HR</th><th>ELEV</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 function renderHRChart(a) {
@@ -1519,6 +1528,17 @@ function renderHRChart(a) {
       const pace = paceStream && paceStream[Math.round(idx * (paceStream.length-1) / (hrStream.length-1))];
       const paceStr = pace ? fmtPace(pace) + '/mi' : '';
       tooltip.style.display = 'block';
+      tooltip.style.position = 'fixed';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top = (e.clientY - 30) + 'px';
+      tooltip.style.background = 'var(--s2)';
+      tooltip.style.border = '1px solid var(--accent)';
+      tooltip.style.borderRadius = '4px';
+      tooltip.style.padding = '4px 8px';
+      tooltip.style.fontSize = '10px';
+      tooltip.style.pointerEvents = 'none';
+      tooltip.style.zIndex = '999';
+      tooltip.style.whiteSpace = 'nowrap';
       tooltip.textContent = `${hr}bpm${paceStr ? ' · ' + paceStr : ''}`;
 
       // Draw crosshair
@@ -1602,6 +1622,18 @@ async function analyzeWorkout() {
   APP._chatRunning = true;
   APP._analyzed = true;
   if (!APP.currentWorkout) return;
+  // Load previous chat history for this workout if available
+  const savedKey = `chat_${APP.currentWorkout.id}`;
+  const saved = localStorage.getItem(savedKey);
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    document.getElementById('chat-messages').innerHTML = parsed.html || '';
+    APP.chatHistory = parsed.history || [];
+    document.getElementById('suggested-replies').innerHTML = '';
+    document.getElementById('analyze-bar').style.display = 'none';
+    APP._chatRunning = false;
+    return;
+  }
   APP.chatHistory = [];
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
@@ -1764,6 +1796,15 @@ function loadChatHistory(workoutId) {
     }
   } catch(e) {}
   return false;
+}
+
+function saveChatToStorage() {
+  if (!APP.currentWorkout) return;
+  const key = `chat_${APP.currentWorkout.id}`;
+  localStorage.setItem(key, JSON.stringify({
+    html: document.getElementById('chat-messages').innerHTML,
+    history: APP.chatHistory
+  }));
 }
 
 function addMsg(role, text) {
