@@ -1,6 +1,5 @@
 // api/athlete-sync.js
 // Saves athlete profile + recent activities to Upstash KV
-// Called by athlete app after Strava OAuth
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,12 +10,18 @@ export default async function handler(req, res) {
   const KV_URL = process.env.UPSTASH_REDIS_REST_URL;
   const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
+  if (!KV_URL || !KV_TOKEN) {
+    return res.status(500).json({ error: 'KV not configured' });
+  }
+
   async function kvSet(key, value) {
+    const payload = typeof value === 'string' ? value : JSON.stringify(value);
     const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(value)
+      body: JSON.stringify(payload)
     });
+    if (!r.ok) throw new Error(`KV set failed: ${r.status}`);
     return r.json();
   }
 
@@ -25,7 +30,12 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     const d = await r.json();
-    return d.result;
+    const raw = d.result;
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch(e) { return null; }
+    }
+    return raw;
   }
 
   async function kvKeys(pattern) {
@@ -38,7 +48,6 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      // Save athlete data
       const { athlete, activities, accessToken } = req.body;
       if (!athlete || !athlete.id) return res.status(400).json({ error: 'Missing athlete' });
 
@@ -47,20 +56,22 @@ export default async function handler(req, res) {
         id: athlete.id,
         firstname: athlete.firstname,
         lastname: athlete.lastname,
+        name: `${athlete.firstname} ${athlete.lastname}`,
         profile: athlete.profile,
+        profile_medium: athlete.profile_medium,
         city: athlete.city,
         country: athlete.country,
         lastSync: new Date().toISOString(),
-        activities: (activities || []).slice(0, 100), // store last 100 runs
+        activities: (activities || []).slice(0, 100),
       };
 
       await kvSet(athleteKey, payload);
 
-      // Also store in athlete index for coach to list all athletes
+      // Update athlete index for coach roster
       const indexKey = `athlete-index:${athlete.id}`;
       await kvSet(indexKey, {
         id: athlete.id,
-        name: `${athlete.firstname} ${athlete.lastname}`,
+        name: payload.name,
         lastSync: payload.lastSync,
         runCount: payload.activities.length
       });
@@ -72,19 +83,13 @@ export default async function handler(req, res) {
       const { athleteId } = req.query;
 
       if (athleteId) {
-        // Get specific athlete
         const data = await kvGet(`athlete:${athleteId}`);
         if (!data) return res.status(404).json({ error: 'Athlete not found' });
-        return res.status(200).json(JSON.parse(data));
+        return res.status(200).json(data);
       } else {
-        // List all athletes (for coach portal)
+        // List all athletes for coach portal
         const keys = await kvKeys('athlete-index:*');
-        const athletes = await Promise.all(
-          keys.map(async k => {
-            const d = await kvGet(k);
-            return d ? JSON.parse(d) : null;
-          })
-        );
+        const athletes = await Promise.all(keys.map(k => kvGet(k)));
         return res.status(200).json(athletes.filter(Boolean));
       }
     }
