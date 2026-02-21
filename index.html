@@ -965,7 +965,7 @@ function coachLoginFromHome() {
 
 // ── KV SYNC ──────────────────────────────────────────────────
 async function syncAthleteToKV() {
-  if (!APP.athlete || !APP.activities.length) return;
+  if (!APP.athlete) return;
   try {
     await fetch('/api/athlete-sync', {
       method: 'POST',
