@@ -5,34 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RunIQ Coach Backroom</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;900&family=Barlow:wght@300;400;500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700;900&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="runiq-kb.js"></script>
 <style>
 :root {
-  --bg: #070709;
-  --s1: #0e0e12;
-  --s2: #14141a;
-  --s3: #1c1c24;
-  --border: #252530;
-  --border2: #32323f;
-  --accent: #e8ff47;
-  --orange: #ff9f43;
-  --blue: #4da6ff;
-  --red: #ff4d4d;
-  --green: #4dff91;
-  --text: #f0f0f5;
-  --muted: #5a5a70;
-  --muted2: #363645;
-  --ai-color: #4da6ff;
-  --coach-color: #ff9f43;
-  --r: 4px;
+  --bg: #f8faff;
+  --s1: #ffffff;
+  --s2: #eef2ff;
+  --s3: #e0e7ff;
+  --border: #d1d9f0;
+  --border2: #b8c4e8;
+  --accent: #2563eb;
+  --accent2: #f97316;
+  --orange: #f97316;
+  --blue: #2563eb;
+  --red: #ef4444;
+  --green: #10b981;
+  --text: #0d1b3e;
+  --muted: #6b7fa8;
+  --muted2: #c7d2e8;
+  --ai-color: #2563eb;
+  --coach-color: #f97316;
+  --r: 6px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-weight:400;min-height:100vh;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-weight:400;min-height:100vh;overflow:hidden;font-size:14px;}
 
-/* noise */
-body::after{content:'';position:fixed;inset:0;opacity:.25;pointer-events:none;z-index:9999;
-background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E");}
+
 
 /* ── LOGIN ── */
 #login-screen{
@@ -42,19 +41,20 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
   flex-direction:column;gap:0;
 }
 .login-box{
-  background:var(--s1);border:1px solid var(--border);border-radius:8px;
+  background:var(--s1);border:1px solid var(--border);border-radius:12px;
   padding:48px;width:380px;
+  box-shadow:0 8px 32px rgba(13,27,62,.08);
   animation:fadeUp .5s ease;
 }
 .login-logo{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:900;letter-spacing:3px;color:var(--accent);margin-bottom:4px;}
-.login-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:36px;}
-.login-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
-.login-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;margin-bottom:16px;}
+.login-sub{font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:36px;}
+.login-label{font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
+.login-input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none;transition:border-color .2s;margin-bottom:16px;}
 .login-input:focus{border-color:var(--accent);}
-.login-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:var(--r);padding:13px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.login-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:var(--r);padding:13px;font-family:IBM Plex Mono,monospace;font-size:12px;font-weight:500;letter-spacing:2px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
 .login-btn:hover{background:#f0ff6a;}
-.login-error{color:var(--red);font-size:12px;margin-top:8px;font-family:'IBM Plex Mono',monospace;display:none;}
-.login-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);text-align:center;margin-top:16px;}
+.login-error{color:var(--red);font-size:12px;margin-top:8px;font-family:IBM Plex Mono,monospace;display:none;}
+.login-hint{font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);text-align:center;margin-top:16px;}
 
 /* ── APP SHELL ── */
 #app{display:none;height:100vh;flex-direction:column;}
@@ -62,16 +62,16 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 
 /* top bar */
 .topbar{
-  height:52px;background:rgba(7,7,9,.95);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
+  height:52px;background:var(--text);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(0,0,0,.1);
   display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0;
 }
-.topbar-logo{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px;color:var(--accent);margin-right:6px;}
-.topbar-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.12);border:1px solid rgba(255,159,67,.3);color:var(--coach-color);margin-right:auto;}
+.topbar-logo{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px;color:#ffffff;margin-right:6px;}
+.topbar-badge{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.12);border:1px solid rgba(255,159,67,.3);color:#f97316;margin-right:auto;}
 .topbar-coach{display:flex;align-items:center;gap:8px;font-size:13px;}
-.coach-avatar{width:28px;height:28px;border-radius:50%;background:rgba(255,159,67,.2);border:1px solid rgba(255,159,67,.4);display:flex;align-items:center;justify-content:center;font-size:13px;}
-.topbar-logout{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;padding:6px 12px;border:1px solid var(--border);border-radius:var(--r);margin-left:16px;transition:all .2s;}
-.topbar-logout:hover{color:var(--text);border-color:var(--border2);}
+.coach-avatar{width:28px;height:28px;border-radius:50%;background:rgba(249,115,22,.25);border:1px solid rgba(249,115,22,.5);display:flex;align-items:center;justify-content:center;font-size:13px;}
+.topbar-logout{font-family:IBM Plex Mono,monospace;font-size:10px;color:rgba(255,255,255,.6);cursor:pointer;padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:var(--r);margin-left:16px;transition:all .2s;}
+.topbar-logout:hover{color:#fff;border-color:rgba(255,255,255,.5);}
 
 /* main layout */
 .main{display:flex;flex:1;overflow:hidden;}
@@ -84,7 +84,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
   background:var(--s1);
 }
 .roster-header{padding:16px;border-bottom:1px solid var(--border);}
-.roster-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.roster-title{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .roster-search{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;color:var(--text);font-size:12px;outline:none;font-family:'IBM Plex Sans',sans-serif;}
 .roster-search:focus{border-color:var(--border2);}
 .roster-list{flex:1;overflow-y:auto;padding:8px;}
@@ -99,7 +99,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .ac-name{font-size:13px;font-weight:500;}
 .ac-goal{font-size:11px;color:var(--muted);}
 .ac-stats{display:flex;gap:8px;margin-top:6px;}
-.ac-stat{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);}
+.ac-stat{font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);}
 .ac-stat span{color:var(--text);}
 .ac-flag{
   margin-left:auto;
@@ -112,7 +112,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .roster-summary{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
 .rs-box{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;text-align:center;}
 .rs-val{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;}
-.rs-lbl{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:1px;}
+.rs-lbl{font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);letter-spacing:1px;}
 
 /* ── ATHLETE DETAIL ── */
 .athlete-detail{flex:1;display:flex;flex-direction:column;overflow:hidden;}
@@ -123,7 +123,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 }
 .detail-tab{
   padding:0 20px;height:44px;display:flex;align-items:center;gap:8px;
-  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
   color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;
   border-right:1px solid var(--border);
 }
@@ -137,18 +137,18 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 /* ── TAB 1: OVERVIEW ── */
 .overview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
 .stat-tile{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;}
-.st-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.st-label{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
 .st-val{font-family:'Rajdhani',sans-serif;font-size:34px;font-weight:700;line-height:1;}
 .st-sub{font-size:11px;color:var(--muted);margin-top:4px;}
-.st-delta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);margin-top:4px;}
+.st-delta{font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--green);margin-top:4px;}
 
 /* last week runs table */
 .runs-table{width:100%;border-collapse:collapse;}
-.runs-table th{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+.runs-table th{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
 .runs-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
 .runs-table tr:last-child td{border-bottom:none;}
 .runs-table tr:hover td{background:var(--s2);}
-.run-type{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;display:inline-block;}
+.run-type{font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 8px;border-radius:2px;display:inline-block;}
 .run-type.easy{background:rgba(90,90,112,.2);color:var(--muted);}
 .run-type.tempo{background:rgba(77,166,255,.12);color:var(--blue);}
 .run-type.long{background:rgba(232,255,71,.08);color:var(--accent);}
@@ -157,26 +157,26 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 /* ── TAB 2: CHAT HISTORY ── */
 .chat-review{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:100%;}
 .chat-log{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px;overflow-y:auto;max-height:calc(100vh - 200px);}
-.cl-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.cl-title{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
 .cl-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .cl-msg{margin-bottom:12px;}
-.cl-sender{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.cl-sender{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
 .cl-sender.ai{color:var(--ai-color);}
 .cl-sender.athlete{color:var(--muted);}
 .cl-bubble{font-size:12px;line-height:1.6;padding:10px 14px;border-radius:var(--r);background:var(--s3);border:1px solid var(--border);}
 .cl-bubble.ai-bubble{border-color:rgba(77,166,255,.2);}
 .cl-bubble.athlete-bubble{border-color:var(--border);}
-.override-btn{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:var(--r);transition:all .15s;}
+.override-btn{margin-top:6px;font-family:IBM Plex Mono,monospace;font-size:9px;padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:var(--r);transition:all .15s;}
 .override-btn:hover{border-color:var(--orange);color:var(--orange);}
 .override-form{display:none;margin-top:8px;}
 .override-form.open{display:block;}
 .override-input{width:100%;background:var(--bg);border:1px solid rgba(255,159,67,.3);border-radius:var(--r);padding:8px 12px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;outline:none;resize:none;margin-bottom:6px;}
-.override-save{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:5px 12px;background:var(--orange);color:#000;border:none;border-radius:var(--r);cursor:pointer;}
+.override-save{font-family:IBM Plex Mono,monospace;font-size:10px;padding:5px 12px;background:var(--orange);color:#000;border:none;border-radius:var(--r);cursor:pointer;}
 
 /* ── TAB 3: AI INSTRUCTIONS ── */
 .instructions-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .instruction-block{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px;}
-.ib-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.ib-label{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .instruction-tag{
   display:inline-flex;align-items:center;gap:8px;
   padding:6px 12px;background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);
@@ -187,15 +187,15 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .instruction-add{display:flex;gap:8px;margin-top:10px;}
 .instruction-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;transition:border-color .2s;}
 .instruction-input:focus{border-color:var(--blue);}
-.instruction-add-btn{background:rgba(77,166,255,.15);border:1px solid rgba(77,166,255,.3);color:var(--blue);border-radius:var(--r);padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.instruction-add-btn{background:rgba(77,166,255,.15);border:1px solid rgba(77,166,255,.3);color:var(--blue);border-radius:var(--r);padding:8px 14px;font-family:IBM Plex Mono,monospace;font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .instruction-add-btn:hover{background:rgba(77,166,255,.25);}
 
 /* ── TAB 4: WEEKLY PLAN COLLAB ── */
 .collab-layout{display:grid;grid-template-columns:1fr 380px;gap:20px;height:100%;}
 .collab-chat{display:flex;flex-direction:column;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;max-height:calc(100vh - 180px);}
 .collab-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-.collab-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.collab-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;}
+.collab-title{font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.collab-badge{font-family:IBM Plex Mono,monospace;font-size:9px;padding:3px 8px;border-radius:10px;}
 .collab-badge.ai{background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.2);color:var(--ai-color);}
 .collab-badge.coach{background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.2);color:var(--coach-color);}
 .collab-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
@@ -205,7 +205,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .collab-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;border:1px solid var(--border);}
 .collab-av.ai-av{background:rgba(77,166,255,.1);border-color:rgba(77,166,255,.25);}
 .collab-av.coach-av{background:rgba(255,159,67,.1);border-color:rgba(255,159,67,.25);}
-.collab-sender{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.collab-sender{font-family:IBM Plex Mono,monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
 .collab-sender.ai-s{color:var(--ai-color);}
 .collab-sender.coach-s{color:var(--coach-color);text-align:right;}
 .collab-bubble{font-size:12px;line-height:1.65;padding:10px 14px;border-radius:var(--r);}
@@ -224,16 +224,16 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .po-sub{font-size:12px;color:var(--muted);}
 .plan-day{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;display:flex;gap:12px;align-items:flex-start;transition:border-color .2s;}
 .plan-day:hover{border-color:var(--border2);}
-.pd-day{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);width:32px;flex-shrink:0;padding-top:2px;}
+.pd-day{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);width:32px;flex-shrink:0;padding-top:2px;}
 .pd-content{flex:1;}
 .pd-workout{font-size:13px;font-weight:500;margin-bottom:3px;}
 .pd-detail{font-size:11px;color:var(--muted);line-height:1.5;}
-.pd-dist{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);margin-top:4px;}
-.pd-type{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:4px;}
-.push-plan-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:var(--r);padding:13px;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pd-dist{font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--accent);margin-top:4px;}
+.pd-type{font-family:IBM Plex Mono,monospace;font-size:8px;padding:2px 7px;border-radius:2px;display:inline-block;margin-bottom:4px;}
+.push-plan-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:var(--r);padding:13px;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .push-plan-btn:hover{background:#f0ff6a;transform:translateY(-1px);}
 .push-plan-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.pushed-badge{display:none;text-align:center;padding:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--green);border:1px solid rgba(77,255,145,.2);border-radius:var(--r);background:rgba(77,255,145,.05);}
+.pushed-badge{display:none;text-align:center;padding:10px;font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--green);border:1px solid rgba(77,255,145,.2);border-radius:var(--r);background:rgba(77,255,145,.05);}
 .pushed-badge.visible{display:block;}
 
 /* ── RX WORKOUTS TAB ── */
@@ -244,10 +244,10 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .rx-day-card{background:var(--s1);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
 .rx-day-card:hover{border-color:var(--border2);}
 .rx-day-header{display:grid;grid-template-columns:52px 1fr auto auto;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;}
-.rx-day-name{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+.rx-day-name{font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
 .rx-day-label{font-size:13px;font-weight:500;}
-.rx-day-dist{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
-.rx-day-type{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;}
+.rx-day-dist{font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--muted);}
+.rx-day-type{font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:1px;}
 .rx-day-type.easy{background:rgba(77,255,145,.1);color:var(--green);border:1px solid rgba(77,255,145,.2);}
 .rx-day-type.tempo{background:rgba(77,166,255,.1);color:var(--blue);border:1px solid rgba(77,166,255,.2);}
 .rx-day-type.vo2{background:rgba(255,77,77,.1);color:var(--red);border:1px solid rgba(255,77,77,.2);}
@@ -257,15 +257,15 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 .rx-day-card.expanded .rx-day-body{display:block;}
 .rx-segment-row{display:grid;grid-template-columns:80px 40px 1fr;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
 .rx-segment-row:last-child{border:none;}
-.rx-seg-type{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;}
-.rx-seg-dist{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text);}
+.rx-seg-type{font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);text-transform:uppercase;}
+.rx-seg-dist{font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--text);}
 .rx-coach-note{font-size:11px;color:var(--orange);margin-top:8px;padding:6px 10px;background:rgba(255,159,67,.06);border-radius:4px;line-height:1.5;}
-.grade-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;}
+.grade-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-family:IBM Plex Mono,monospace;font-size:12px;font-weight:600;}
 .grade-A{background:rgba(77,255,145,.15);color:var(--green);border:1px solid rgba(77,255,145,.3);}
 .grade-B{background:rgba(77,166,255,.15);color:var(--blue);border:1px solid rgba(77,166,255,.3);}
 .grade-C{background:rgba(255,159,67,.15);color:var(--orange);border:1px solid rgba(255,159,67,.3);}
 .grade-D,.grade-F{background:rgba(255,77,77,.12);color:var(--red);border:1px solid rgba(255,77,77,.25);}
-.rx-edit-input{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;width:100%;}
+.rx-edit-input{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:11px;width:100%;}
 .rx-edit-input:focus{outline:none;border-color:var(--accent);}
 
 
@@ -279,10 +279,10 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 @keyframes tp{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
 
 /* ── MISC ── */
-.section-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-title{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
 .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
 .card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;}
 .btn-primary{background:var(--accent);color:#000;}
 .btn-primary:hover{background:#f0ff6a;}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
@@ -323,10 +323,10 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
     <div class="topbar-badge">⚡ Coach Backroom</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
-      <span style="font-size:13px;">Coach Mike</span>
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-left:4px;">· 8 athletes</span>
+      <span style="font-size:13px;color:#fff;">Coach Mike</span>
+      <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.5);margin-left:4px;">· 8 athletes</span>
     </div>
-    <a href="index.html" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);padding:6px 12px;border:1px solid var(--border);border-radius:var(--r);text-decoration:none;transition:all .2s;margin-left:0;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">← Athlete App</a>
+    <a href="index.html" style="font-family:IBM Plex Mono,monospace;font-size:10px;color:rgba(255,255,255,.7);padding:6px 12px;border:1px solid rgba(255,255,255,.2);border-radius:var(--r);text-decoration:none;transition:all .2s;margin-left:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.7)'">← Athlete App</a>
     <div class="topbar-logout" onclick="logout()">Log Out</div>
   </div>
 
@@ -352,7 +352,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
     <div class="athlete-detail">
       <div class="detail-tabs">
         <div class="detail-tab active" onclick="switchTab('overview',this)">Overview</div>
-        <div class="detail-tab" onclick="switchTab('chat',this)">Chat History</div>
+        <div class="detail-tab" onclick="switchTab('chat',this)">💬 Messaging</div>
         <div class="detail-tab" onclick="switchTab('instructions',this)">AI Instructions</div>
         <div class="detail-tab" onclick="switchTab('rx',this)">📋 Rx Workouts</div>
       </div>
@@ -387,29 +387,51 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
           <div style="display:flex;align-items:flex-start;gap:12px;">
             <div style="width:32px;height:32px;border-radius:50%;background:rgba(77,166,255,.12);border:1px solid rgba(77,166,255,.25);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🤖</div>
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--ai-color);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">AI Weekly Summary → Coach Mike</div>
+              <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--ai-color);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">AI Weekly Summary → Coach Mike</div>
               <div id="ai-summary-text" style="font-size:13px;line-height:1.7;color:var(--text);"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── TAB: CHAT HISTORY ── -->
+      <!-- ── TAB: MESSAGING ── -->
       <div class="tab-content" id="tab-chat">
-        <div class="chat-review">
-          <div>
-            <div class="section-title">Athlete ↔ AI Chat Log</div>
-            <div class="chat-log" id="chat-log"></div>
-          </div>
-          <div>
-            <div class="section-title">Coach Override</div>
-            <div class="card" style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:14px;">
-              Flag or rewrite any AI response before the athlete sees it in their next session. Overridden messages display with a <span style="color:var(--orange);">coach edit</span> badge.
+        <div style="display:grid;grid-template-columns:1fr 320px;height:100%;overflow:hidden;">
+
+          <!-- LEFT: 3-way thread (Athlete + AI + Coach) -->
+          <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--text);" id="msg-athlete-name">—</div>
+              <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">Athlete · AI · Coach thread</div>
+              <div style="margin-left:auto;display:flex;gap:6px;">
+                <div style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);color:var(--blue);">🏃 Athlete</div>
+                <div style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);color:var(--ai-color);">🤖 AI</div>
+                <div style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2);color:var(--orange);">👨‍💼 Coach</div>
+              </div>
             </div>
-            <div class="card">
-              <div class="ib-label">Direct Message to Athlete</div>
-              <textarea class="instruction-input" style="width:100%;min-height:80px;margin-bottom:10px;resize:vertical;" placeholder="Write a note that will appear in the athlete's next coaching session..."></textarea>
-              <button class="btn btn-orange" style="width:100%;justify-content:center;">📤 Send to Athlete</button>
+            <div class="chat-log" id="chat-log" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;"></div>
+            <!-- Coach direct message input -->
+            <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--s2);flex-shrink:0;">
+              <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--orange);margin-bottom:5px;letter-spacing:1px;">👨‍💼 COACH — direct message to athlete</div>
+              <div style="display:flex;gap:8px;">
+                <input class="instruction-input" style="flex:1;margin-bottom:0;" id="coach-dm-input" placeholder="Type a message to inject into athlete's chat..." onkeydown="if(event.key==='Enter')sendCoachDM()">
+                <button onclick="sendCoachDM()" style="font-family:IBM Plex Mono,monospace;font-size:10px;padding:8px 14px;background:var(--orange);color:#fff;border:none;border-radius:var(--r);cursor:pointer;white-space:nowrap;">Send →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Coach internal notes (private, athlete doesn't see) -->
+          <div style="display:flex;flex-direction:column;overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--text);">Coach Notes</div>
+              <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-top:2px;">Private — athlete never sees this</div>
+            </div>
+            <div id="coach-notes-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;"></div>
+            <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--s2);flex-shrink:0;">
+              <div style="display:flex;gap:8px;">
+                <input class="instruction-input" style="flex:1;margin-bottom:0;" id="coach-note-input" placeholder="Add a coach note..." onkeydown="if(event.key==='Enter')addCoachThreadNote()">
+                <button onclick="addCoachThreadNote()" style="font-family:IBM Plex Mono,monospace;font-size:10px;padding:8px 14px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;">+ Note</button>
+              </div>
             </div>
           </div>
         </div>
@@ -422,11 +444,22 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
           <div>
             <div class="section-title">Athlete Profile</div>
             <div class="card" id="mem-profile-card">
-              <div class="ib-label" style="margin-bottom:10px;">Race Goal</div>
-              <input class="instruction-input" type="text" id="mem-goal" placeholder="e.g. Sub-3:30 marathon" style="margin-bottom:8px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+              <div class="ib-label" style="margin-bottom:6px;">Race Goal</div>
+              <input class="instruction-input" type="text" id="mem-goal" placeholder="e.g. Sub-3:30 marathon" style="margin-bottom:6px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
                 <input class="instruction-input" type="text" id="mem-race" placeholder="Target Race (e.g. Boston 2026)">
                 <input class="instruction-input" type="text" id="mem-date" placeholder="Race Date (e.g. Apr 21 2026)">
+              </div>
+              <div class="ib-label" style="margin-bottom:6px;">Goal Finish Time</div>
+              <input class="instruction-input" type="text" id="mem-goal-time" placeholder="e.g. 3:25:00" style="margin-bottom:6px;">
+              <div id="goal-vs-estimate" style="display:none;padding:10px 12px;background:var(--s2);border-radius:6px;border:1px solid var(--border);margin-bottom:8px;font-size:12px;">
+                <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:1px;">GOAL vs ESTIMATOR</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div><div style="font-size:10px;color:var(--muted);">Goal</div><div id="gve-goal" style="font-size:16px;font-weight:700;font-family:'Rajdhani',sans-serif;">—</div></div>
+                  <div style="font-size:18px;color:var(--muted);">→</div>
+                  <div><div style="font-size:10px;color:var(--muted);">Estimator says</div><div id="gve-estimate" style="font-size:16px;font-weight:700;font-family:'Rajdhani',sans-serif;">—</div></div>
+                  <div><div style="font-size:10px;color:var(--muted);">Delta</div><div id="gve-delta" style="font-size:16px;font-weight:700;font-family:'Rajdhani',sans-serif;">—</div></div>
+                </div>
               </div>
               <div class="ib-label" style="margin-bottom:6px;margin-top:4px;">Coaching Notes (injected into every AI prompt)</div>
               <textarea class="instruction-input" id="mem-prefs" style="width:100%;min-height:100px;resize:vertical;margin-bottom:10px;" placeholder="e.g. Responds well to data. Tends to overtrain — push back on adding miles. Goal is Boston qualifier."></textarea>
@@ -462,7 +495,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
 
             <div class="section-title">Memory Status</div>
             <div class="card" id="memory-status-card">
-              <div id="memory-status-text" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">Loading...</div>
+              <div id="memory-status-text" style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);">Loading...</div>
             </div>
           </div>
         </div>
@@ -477,17 +510,17 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
             <div class="rx-header">
               <div>
                 <div class="section-title" style="margin-bottom:2px;">Weekly Prescription</div>
-                <div id="rx-phase-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:1px;"></div>
+                <div id="rx-phase-badge" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);letter-spacing:1px;"></div>
               </div>
               <div style="display:flex;gap:8px;align-items:center;">
-                <div id="rx-status-badge" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.3);color:var(--orange);">DRAFT</div>
+                <div id="rx-status-badge" style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.3);color:var(--orange);">DRAFT</div>
                 <button class="btn btn-ghost" style="font-size:9px;padding:5px 12px;" onclick="generateRxDraft()">🤖 AI Draft</button>
               </div>
             </div>
 
             <!-- AI Reasoning -->
             <div id="rx-reasoning" style="display:none;background:rgba(77,166,255,.06);border:1px solid rgba(77,166,255,.2);border-radius:6px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.7;color:var(--text);">
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--blue);letter-spacing:2px;margin-bottom:8px;">🤖 AI REASONING</div>
+              <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);letter-spacing:2px;margin-bottom:8px;">🤖 AI REASONING</div>
               <div id="rx-reasoning-text"></div>
             </div>
 
@@ -499,7 +532,7 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
               <button class="btn" style="flex:1;justify-content:center;background:rgba(255,255,255,.05);border:1px solid var(--border2);color:var(--muted);" onclick="saveDraft()">💾 Save Draft</button>
               <button class="btn" id="rx-approve-btn" style="flex:2;justify-content:center;background:var(--accent);color:#000;font-weight:600;" onclick="approveAndPush()">📤 Approve & Push to Athlete</button>
             </div>
-            <div id="rx-pushed-confirm" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--green);padding:10px;text-align:center;border:1px solid rgba(77,255,145,.2);border-radius:6px;margin-top:12px;">✓ PLAN PUSHED — athlete will see it on next open</div>
+            <div id="rx-pushed-confirm" style="display:none;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--green);padding:10px;text-align:center;border:1px solid rgba(77,255,145,.2);border-radius:6px;margin-top:12px;">✓ PLAN PUSHED — athlete will see it on next open</div>
           </div>
 
           <!-- RIGHT: AI Chat for refinement -->
@@ -700,10 +733,14 @@ let collabPlan = null;
 // per-athlete instruction state
 let athleteInstructions = {};
 let athleteRestrictions = {};
+let athleteChatHistory = {};   // { athleteId: [{role, sender, content, timestamp}] }
+let athleteCoachNotes = {};    // { athleteId: [{note, date, author}] }
 function initAthleteState() {
   ATHLETES.forEach(a => {
     athleteInstructions[a.id] = a.instructions ? [...a.instructions] : [];
     athleteRestrictions[a.id] = a.restrictions ? [...a.restrictions] : [];
+    athleteChatHistory[a.id] = [];
+    athleteCoachNotes[a.id] = [];
   });
 }
 
@@ -765,9 +802,7 @@ function renderRoster(filter='') {
     const cutoff = Date.now() - 7 * 86400000;
     const weekMi = acts.filter(x => new Date(x.start_date) > cutoff)
                        .reduce((s,x) => s + (x.distance||0)/1609.34, 0).toFixed(1);
-    const statsHtml = a.stats 
-      ? `<div class="ac-stat">mi/wk: <span>${a.stats.weeklyMi}</span></div><div class="ac-stat">form: <span>${a.stats.form}</span></div>`
-      : `<div class="ac-stat">mi/wk: <span>${weekMi}</span></div><div class="ac-stat">runs: <span>${acts.length}</span></div>`;
+    const statsHtml = `<div class="ac-stat">mi/wk: <span>${weekMi}</span></div><div class="ac-stat">runs: <span>${acts.length}</span></div>`;
     el.innerHTML = `
       <div class="ac-top">
         <div class="ac-avatar" style="background:${a.color}22;border:1px solid ${a.color}44;color:${a.color};">${a.initials}</div>
@@ -792,19 +827,24 @@ function loadAthlete(a) {
   currentAthlete = a;
   renderRoster();
   renderOverview();
-  renderChatLog();
+  renderMessaging();
   renderInstructions();
-  // reset collab
-  collabHistory = [];
-  collabPlan = null;
-  document.getElementById('collab-messages').innerHTML = '';
-  document.getElementById('plan-days').innerHTML = '';
-  document.getElementById('plan-week-sub').textContent = 'Collaborate with AI to generate →';
-  document.getElementById('push-btn').disabled = true;
-  document.getElementById('pushed-badge').classList.remove('visible');
-  // auto-start collab session if on that tab
-  if (document.getElementById('tab-collab').classList.contains('active')) {
-    startCollabSession();
+  // Reset Rx tab state
+  currentRxPlan = null;
+  rxChatHistory = [];
+  const rxGrid = document.getElementById('rx-days-grid');
+  if (rxGrid) rxGrid.innerHTML = '';
+  const rxReas = document.getElementById('rx-reasoning');
+  if (rxReas) rxReas.style.display = 'none';
+  const rxActs = document.getElementById('rx-actions');
+  if (rxActs) rxActs.style.display = 'none';
+  const rxPushed = document.getElementById('rx-pushed-confirm');
+  if (rxPushed) rxPushed.style.display = 'none';
+  const rxChat = document.getElementById('rx-chat-messages');
+  if (rxChat) rxChat.innerHTML = '';
+  updateRxStatus('draft');
+  if (document.getElementById('tab-rx').classList.contains('active')) {
+    loadRxTab();
   }
 }
 
@@ -889,8 +929,8 @@ function renderOverview() {
         <div style="height:100%;width:${miPct}%;background:var(--accent);border-radius:2px;transition:width .5s;"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:5px;">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">${s.weeklyMiPrescribed} prescribed this week</div>
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">${s.weeklyMiTotal} total plan</div>
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">${s.weeklyMiPrescribed} prescribed this week</div>
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">${s.weeklyMiTotal} total plan</div>
       </div>
     </div>`;
 
@@ -920,15 +960,15 @@ function renderOverview() {
       <div class="st-label">Best Effort Pace</div>
       <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">1 mi</span>
+          <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">1 mi</span>
           <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;">${s.best1mi}</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:5px;">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">2 mi</span>
+          <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">2 mi</span>
           <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;">${s.best2mi}</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:5px;">
-          <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);">3 mi</span>
+          <span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">3 mi</span>
           <span style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;">${s.best3mi}</span>
         </div>
       </div>
@@ -971,14 +1011,14 @@ function renderRunTable(tbodyId, runs) {
   tbody.innerHTML = '';
   (runs || []).forEach(r => {
     const notDone = !r.done && r.dist === '—';
-    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:#fc4c02;font-family:'IBM Plex Mono',monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>` : '—';
+    const stravaLink = r.id ? `<a href="https://www.strava.com/activities/${r.id}" target="_blank" style="color:#fc4c02;font-family:IBM Plex Mono,monospace;font-size:9px;text-decoration:none;letter-spacing:1px;border:1px solid rgba(252,76,2,.35);padding:2px 8px;border-radius:4px;background:rgba(252,76,2,.06);white-space:nowrap;">↗ Strava</a>` : '—';
     tbody.innerHTML += `<tr style="${notDone?'opacity:0.45;':''}">
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">${r.day}</td>
+      <td style="font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--muted);">${r.day}</td>
       <td style="${notDone?'font-style:italic;color:var(--muted);':''}">${r.name}</td>
       <td><span class="run-type ${r.type}">${r.type}</span></td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;">${r.dist}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;${r.pace!=='—'?'':'color:var(--muted);'}">${r.pace !== '—' ? r.pace+' /mi' : '—'}</td>
-      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;${parseInt(r.hr)>170?'color:var(--red);':''}">${r.hr !== '—' ? r.hr+' bpm' : '—'}</td>
+      <td style="font-family:IBM Plex Mono,monospace;font-size:12px;">${r.dist}</td>
+      <td style="font-family:IBM Plex Mono,monospace;font-size:12px;${r.pace!=='—'?'':'color:var(--muted);'}">${r.pace !== '—' ? r.pace+' /mi' : '—'}</td>
+      <td style="font-family:IBM Plex Mono,monospace;font-size:12px;${parseInt(r.hr)>170?'color:var(--red);':''}">${r.hr !== '—' ? r.hr+' bpm' : '—'}</td>
       <td style="font-size:11px;color:var(--muted);">${r.note}</td>
     </tr>`;
   });
@@ -1063,7 +1103,7 @@ function populateMemoryUI(mem) {
     const realIdx = (mem.coachNotes.length - 1) - i;
     const d = new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     notesEl.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:7px 10px;background:var(--s2);border-radius:4px;font-size:12px;">
-      <div><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-right:8px;">[${d}]</span>${n.note}</div>
+      <div><span style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-right:8px;">[${d}]</span>${n.note}</div>
       <span onclick="deleteCoachNote(${realIdx});" style="cursor:pointer;color:var(--muted);font-size:10px;flex-shrink:0;">✕</span>
     </div>`;
   });
@@ -1078,10 +1118,21 @@ function populateMemoryUI(mem) {
     summaries.forEach(s => {
       const d = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       summEl.innerHTML += `<div style="padding:8px 10px;background:var(--s2);border-radius:4px;border-left:3px solid var(--accent);">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px;">[${d}] ${s.workoutName}</div>
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:3px;">[${d}] ${s.workoutName}</div>
         <div style="font-size:12px;line-height:1.5;">${s.summary}</div>
       </div>`;
     });
+  }
+
+  // Populate goal time
+  const goalTimeEl = document.getElementById('mem-goal-time');
+  if (goalTimeEl && mem.goalTime) goalTimeEl.value = mem.goalTime;
+
+  // Sync coachNotes to local state for messaging tab
+  if (mem.coachNotes && mem.coachNotes.length && currentAthlete) {
+    athleteCoachNotes[currentAthlete.id] = mem.coachNotes;
+    const notesThread = document.getElementById('coach-notes-thread');
+    if (notesThread) renderCoachNotesThread();
   }
 
   // Status
@@ -1108,10 +1159,12 @@ async function saveMemoryProfile() {
           goal: document.getElementById('mem-goal').value,
           targetRace: document.getElementById('mem-race').value,
           targetDate: document.getElementById('mem-date').value,
+          goalTime: document.getElementById('mem-goal-time')?.value || '',
           athletePreferences: document.getElementById('mem-prefs').value,
         }
       })
     });
+    loadGoalVsEstimate();
     btn.textContent = '✓ Saved';
     setTimeout(() => { btn.textContent = 'Save Profile →'; }, 2000);
     loadAthleteMemory();
@@ -1285,7 +1338,7 @@ async function fetchMemory(athleteId) {
 
 function renderEmptyRxGrid() {
   const grid = document.getElementById('rx-days-grid');
-  grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px dashed var(--border);border-radius:8px;">
+  grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:IBM Plex Mono,monospace;font-size:11px;border:1px dashed var(--border);border-radius:8px;">
     NO PRESCRIPTION FOR NEXT WEEK YET<br><br>
     <span style="font-size:10px;">Click "🤖 AI Draft" to generate, or build manually</span>
   </div>`;
@@ -1329,9 +1382,9 @@ function renderRxGrid(rx) {
       <div class="rx-day-body">
         ${isRest ? '<div style="font-size:12px;color:var(--muted);padding:8px 0;">Recovery day — no running.</div>' : renderSegments(segs, dayKey)}
         ${day.coachNote ? `<div class="rx-coach-note">📝 ${day.coachNote}</div>` : ''}
-        ${day.completedAt ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--green);margin-top:8px;">✓ COMPLETED ${new Date(day.completedAt).toLocaleDateString()}</div>` : ''}
+        ${day.completedAt ? `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green);margin-top:8px;">✓ COMPLETED ${new Date(day.completedAt).toLocaleDateString()}</div>` : ''}
         <div style="margin-top:10px;display:flex;gap:8px;">
-          <button onclick="editRxDay('${dayKey}')" style="font-family:'IBM Plex Mono',monospace;font-size:9px;padding:4px 10px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;">✏ Edit</button>
+          <button onclick="editRxDay('${dayKey}')" style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:4px 10px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;">✏ Edit</button>
         </div>
       </div>
     `;
@@ -1361,15 +1414,146 @@ function toggleRxDay(dayKey) {
   if (card) card.classList.toggle('expanded');
 }
 
+const SEG_TYPES = ['wu','ez','mp','hmp','threshold','vo2','strides','cd'];
+const SEG_TYPE_LABELS = {wu:'Warmup',ez:'Easy',mp:'Marathon Pace',hmp:'Half MP',threshold:'Threshold',vo2:'VO2 Max',strides:'Strides',cd:'Cooldown'};
+
 function editRxDay(dayKey) {
   const day = currentRxPlan?.days?.[dayKey];
   if (!day) return;
-  const note = prompt(`Coach note for ${dayKey.toUpperCase()}:`, day.coachNote || '');
-  if (note !== null) {
-    if (!currentRxPlan.days[dayKey]) currentRxPlan.days[dayKey] = {};
-    currentRxPlan.days[dayKey].coachNote = note;
-    renderRxGrid(currentRxPlan);
+
+  // Build full-screen editor overlay
+  let overlay = document.getElementById('rx-edit-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'rx-edit-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(13,27,62,.5);display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(overlay);
   }
+
+  const dayNames = {mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday',sun:'Sunday'};
+  const segs = day.segments ? JSON.parse(JSON.stringify(day.segments)) : [];
+
+  function buildEditor() {
+    const segRows = segs.map((s, i) => `
+      <div class="seg-edit-row" id="seg-row-${i}">
+        <select onchange="rxEditSegChange(${i},'type',this.value)" style="font-family:IBM Plex Mono,monospace;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--text);">
+          ${SEG_TYPES.map(t => `<option value="${t}" ${s.type===t?'selected':''}>${SEG_TYPE_LABELS[t]||t}</option>`).join('')}
+        </select>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" step="0.5" min="0" max="30" value="${s.dist||''}" placeholder="—"
+            onchange="rxEditSegChange(${i},'dist',parseFloat(this.value)||0)"
+            style="width:60px;font-family:IBM Plex Mono,monospace;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--text);">
+          <select onchange="rxEditSegChange(${i},'unit',this.value)" style="font-family:IBM Plex Mono,monospace;font-size:10px;padding:5px 6px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--text);">
+            <option value="mi" ${(!s.unit||s.unit==='mi')?'selected':''}>mi</option>
+            <option value="min" ${s.unit==='min'?'selected':''}>min</option>
+            <option value="km" ${s.unit==='km'?'selected':''}>km</option>
+          </select>
+        </div>
+        <input type="number" min="1" max="20" value="${s.reps||1}" placeholder="×1"
+          onchange="rxEditSegChange(${i},'reps',parseInt(this.value)||1)"
+          style="width:48px;font-family:IBM Plex Mono,monospace;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--text);"
+          title="Reps">
+        <input type="text" value="${s.intensity||''}" placeholder="intensity note..."
+          onchange="rxEditSegChange(${i},'intensity',this.value)"
+          style="flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:11px;padding:5px 8px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;color:var(--text);">
+        <button onclick="rxEditRemoveSeg(${i})" style="font-size:14px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0 4px;" title="Remove">×</button>
+      </div>
+    `).join('');
+
+    const totalDist = segs.reduce((s,sg) => s + (sg.unit==='mi'||!sg.unit ? (sg.dist||0)*(sg.reps||1) : 0), 0);
+
+    overlay.innerHTML = `
+      <div style="background:var(--s1);border-radius:10px;width:620px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 16px 48px rgba(13,27,62,.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;">Edit ${dayNames[dayKey]}</div>
+            <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">Total: ${totalDist.toFixed(1)} mi</div>
+          </div>
+          <button onclick="document.getElementById('rx-edit-overlay').style.display='none'" style="font-size:20px;background:none;border:none;color:var(--muted);cursor:pointer;">×</button>
+        </div>
+
+        <!-- Workout label + type -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div>
+            <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">WORKOUT NAME</div>
+            <input id="rx-edit-label" value="${day.label||''}" placeholder="e.g. Tempo Run"
+              style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:4px;color:var(--text);">
+          </div>
+          <div>
+            <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">WORKOUT TYPE</div>
+            <select id="rx-edit-type" style="width:100%;font-family:IBM Plex Mono,monospace;font-size:11px;padding:7px 10px;background:var(--s2);border:1px solid var(--border);border-radius:4px;color:var(--text);">
+              ${['easy','tempo','vo2','long','rest'].map(t=>`<option value="${t}" ${day.type===t?'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Segments header -->
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">SEGMENTS</div>
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);display:grid;grid-template-columns:130px 115px 48px 1fr 20px;gap:6px;padding:0 0 4px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+          <span>TYPE</span><span>DIST / TIME</span><span>×REPS</span><span>NOTE</span><span></span>
+        </div>
+        <div id="rx-seg-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;">${segRows}</div>
+
+        <button onclick="rxEditAddSeg()" style="font-family:IBM Plex Mono,monospace;font-size:10px;padding:6px 14px;background:var(--s2);border:1px dashed var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;width:100%;margin-bottom:14px;">+ Add Segment</button>
+
+        <!-- Coach note -->
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">COACH NOTE (shown to athlete)</div>
+        <textarea id="rx-edit-note" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical;min-height:60px;margin-bottom:14px;" placeholder="e.g. Keep tempo honest, not a race effort. Back off if HR > 165.">${day.coachNote||''}</textarea>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="document.getElementById('rx-edit-overlay').style.display='none'" style="flex:1;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;cursor:pointer;color:var(--muted);">Cancel</button>
+          <button onclick="saveRxDayEdit('${dayKey}')" style="flex:2;padding:10px;background:var(--accent);border:none;border-radius:6px;font-family:IBM Plex Mono,monospace;font-size:11px;font-weight:600;cursor:pointer;color:#fff;">Save Day →</button>
+        </div>
+      </div>
+    `;
+
+    // Attach .seg-edit-row CSS
+    if (!document.getElementById('seg-edit-css')) {
+      const style = document.createElement('style');
+      style.id = 'seg-edit-css';
+      style.textContent = '.seg-edit-row{display:grid;grid-template-columns:130px 115px 48px 1fr 20px;gap:6px;align-items:center;padding:4px 0;}';
+      document.head.appendChild(style);
+    }
+  }
+
+  // Track edits in closure
+  window._rxEditSegs = segs;
+  window._rxEditDayKey = dayKey;
+
+  window.rxEditSegChange = (i, field, val) => { window._rxEditSegs[i][field] = val; };
+  window.rxEditRemoveSeg = (i) => { window._rxEditSegs.splice(i, 1); buildEditor(); };
+  window.rxEditAddSeg = () => {
+    window._rxEditSegs.push({ type: 'ez', dist: 1, unit: 'mi', reps: 1, intensity: '' });
+    buildEditor();
+  };
+
+  overlay.style.display = 'flex';
+  buildEditor();
+}
+
+function saveRxDayEdit(dayKey) {
+  const label = document.getElementById('rx-edit-label')?.value || '';
+  const type = document.getElementById('rx-edit-type')?.value || 'easy';
+  const note = document.getElementById('rx-edit-note')?.value || '';
+  const segs = window._rxEditSegs || [];
+  const totalDist = segs.reduce((s,sg) => s + (sg.unit==='mi'||!sg.unit ? (sg.dist||0)*(sg.reps||1) : 0), 0);
+
+  if (!currentRxPlan.days) currentRxPlan.days = {};
+  currentRxPlan.days[dayKey] = {
+    ...currentRxPlan.days[dayKey],
+    label, type, coachNote: note,
+    segments: segs,
+    totalDist: Math.round(totalDist * 10) / 10
+  };
+
+  // Recompute total
+  const allDays = Object.values(currentRxPlan.days);
+  currentRxPlan.totalMiles = Math.round(
+    allDays.reduce((s,d) => s + (d.totalDist||0), 0) * 10
+  ) / 10;
+
+  document.getElementById('rx-edit-overlay').style.display = 'none';
+  renderRxGrid(currentRxPlan);
 }
 
 function updateRxStatus(status) {
@@ -1380,7 +1564,7 @@ function updateRxStatus(status) {
     pushed: 'rgba(77,255,145,.1);border:1px solid rgba(77,255,145,.3);color:var(--green)',
     approved: 'rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.3);color:var(--blue)'
   };
-  badge.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:${styles[status] || styles.draft}`;
+  badge.style.cssText = `font-family:IBM Plex Mono,monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:${styles[status] || styles.draft}`;
   badge.textContent = (status || 'DRAFT').toUpperCase();
 }
 
@@ -1393,7 +1577,7 @@ async function generateRxDraft() {
   btn.disabled = true;
 
   document.getElementById('rx-reasoning').style.display = 'none';
-  document.getElementById('rx-days-grid').innerHTML = `<div style="text-align:center;padding:32px;color:var(--blue);font-family:'IBM Plex Mono',monospace;font-size:10px;">GENERATING AI DRAFT...</div>`;
+  document.getElementById('rx-days-grid').innerHTML = `<div style="text-align:center;padding:32px;color:var(--blue);font-family:IBM Plex Mono,monospace;font-size:10px;">GENERATING AI DRAFT...</div>`;
 
   try {
     const mem = await fetchMemory(a.id);
@@ -1469,17 +1653,35 @@ async function generateRxDraft() {
 function buildLast3WeeksData(a) {
   const acts = a.activities || [];
   const weeks = [];
+  // Build Monday-anchored week windows, going back 3 weeks
+  // w=0 = current week, w=1 = last week, w=2 = 2 weeks ago
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  const thisMonday = new Date(now);
+  thisMonday.setDate(now.getDate() - dow);
+  thisMonday.setHours(0,0,0,0);
+
   for (let w = 2; w >= 0; w--) {
-    const now = new Date();
-    const dow = (now.getDay() + 6) % 7;
-    const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() - dow - w*7); weekEnd.setHours(23,59,59,0);
-    const weekStart = new Date(weekEnd); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
-    const wkActs = acts.filter(x => { const t = new Date(x.start_date); return t >= weekStart && t <= weekEnd; });
+    const weekStart = new Date(thisMonday);
+    weekStart.setDate(thisMonday.getDate() - w * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23,59,59,999);
+
+    const wkActs = acts.filter(x => {
+      const t = new Date(x.start_date);
+      return t >= weekStart && t <= weekEnd;
+    });
+
+    const totalMi = wkActs.reduce((s,x) => s + (x.distance||0)/1609.34, 0);
     weeks.push({
+      weekLabel: w === 0 ? 'This week' : w === 1 ? 'Last week' : '2 weeks ago',
+      totalMi: Math.round(totalMi * 10) / 10,
       runs: wkActs.map(x => ({
         name: x.name,
         distanceMi: Math.round((x.distance||0)/1609.34 * 10)/10,
         pace: x.moving_time && x.distance ? Math.round(x.moving_time / (x.distance/1609.34)) : null,
+        avgHr: x.average_heartrate || null,
         grade: x._grade || null
       }))
     });
@@ -1511,19 +1713,25 @@ async function approveAndPush() {
   btn.textContent = 'Pushing...';
   btn.disabled = true;
   try {
-    await fetch('/api/prescription', {
+    // First save the latest plan state as draft
+    currentRxPlan.weekStart = currentRxPlan.weekStart || getNextMonday();
+    await saveDraft(true);
+    // Then mark as pushed
+    const res = await fetch('/api/prescription', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ athleteId: a.id, action: 'approve_push', prescription: currentRxPlan })
     });
+    if (!res.ok) throw new Error('Push failed: ' + res.status);
+    currentRxPlan.status = 'pushed';
     updateRxStatus('pushed');
     document.getElementById('rx-pushed-confirm').style.display = 'block';
     document.getElementById('rx-actions').style.display = 'none';
-    addRxMsg('ai', `Plan pushed to ${a.name}'s app. They'll see the full week's prescription on next open. I'll track completion and grade each workout.`);
-    currentRxPlan.status = 'pushed';
+    addRxMsg('ai', `Plan pushed to ${a.name}'s app for week of ${currentRxPlan.weekStart}. They'll see it on next open.`);
   } catch(e) {
     btn.textContent = 'Error — retry';
     btn.disabled = false;
+    addRxMsg('ai', 'Push failed: ' + e.message);
   }
 }
 
@@ -1618,6 +1826,184 @@ function handleRxChatKey(e) {
 // ── LEGACY COLLAB (kept for reference) ──
 
 // ══════════════════════════════════════
+// MESSAGING TAB
+// ══════════════════════════════════════
+function renderMessaging() {
+  const a = currentAthlete;
+  if (!a) return;
+  const nameEl = document.getElementById('msg-athlete-name');
+  if (nameEl) nameEl.textContent = a.name;
+  // Load chat history from KV then render
+  loadChatHistoryFromKV(a.id).then(() => renderChatLog());
+  renderCoachNotesThread();
+}
+
+async function loadChatHistoryFromKV(athleteId) {
+  try {
+    const res = await fetch(`/api/chat-history?athleteId=${athleteId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.messages) {
+      athleteChatHistory[athleteId] = data.messages;
+    }
+  } catch(e) {}
+}
+
+function renderChatLog() {
+  const container = document.getElementById('chat-log');
+  if (!container || !currentAthlete) return;
+  container.innerHTML = '';
+
+  const history = athleteChatHistory[currentAthlete.id] || [];
+  if (!history.length) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);">No chat history yet for this athlete.</div>';
+    return;
+  }
+
+  history.forEach(msg => {
+    const el = document.createElement('div');
+    const isAI = msg.role === 'assistant' || msg.sender === 'ai';
+    const isCoach = msg.sender === 'coach';
+    const isAthlete = msg.role === 'user' || msg.sender === 'athlete';
+
+    let avatarStyle, labelText, bubbleStyle;
+    if (isCoach) {
+      avatarStyle = 'background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);';
+      labelText = '👨‍💼 Coach';
+      bubbleStyle = 'background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);';
+    } else if (isAI) {
+      avatarStyle = 'background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.2);';
+      labelText = '🤖 AI Coach';
+      bubbleStyle = 'background:var(--s2);border:1px solid var(--border);';
+    } else {
+      avatarStyle = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);';
+      labelText = '🏃 ' + (currentAthlete.name?.split(' ')[0] || 'Athlete');
+      bubbleStyle = 'background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.15);';
+    }
+
+    el.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
+    el.innerHTML = `
+      <div style="width:30px;height:30px;border-radius:50%;${avatarStyle}display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">${isCoach?'👨‍💼':isAI?'🤖':'🏃'}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">${labelText}${msg.timestamp?' · '+new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''}</div>
+        ${msg.workoutCard ? `<div style="padding:8px 12px;background:var(--s3);border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-bottom:4px;">⚡ Analyzing: ${msg.workoutCard}</div>` : ''}
+        <div style="padding:10px 12px;${bubbleStyle}border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||msg.text||'').replace(/\n/g,'<br>')}</div>
+      </div>
+    `;
+    container.appendChild(el);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderCoachNotesThread() {
+  const container = document.getElementById('coach-notes-thread');
+  if (!container || !currentAthlete) return;
+  const notes = athleteCoachNotes[currentAthlete.id] || [];
+  container.innerHTML = '';
+  if (!notes.length) {
+    container.innerHTML = '<div style="padding:12px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);">No coach notes yet.</div>';
+    return;
+  }
+  notes.forEach((n, i) => {
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;';
+    el.innerHTML = `
+      <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">${n.date ? new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Note'} · Private</div>
+      <div style="font-size:13px;line-height:1.5;color:var(--text);">${n.note}</div>
+    `;
+    container.appendChild(el);
+  });
+}
+
+function addCoachThreadNote() {
+  const input = document.getElementById('coach-note-input');
+  if (!input?.value.trim() || !currentAthlete) return;
+  if (!athleteCoachNotes[currentAthlete.id]) athleteCoachNotes[currentAthlete.id] = [];
+  const note = { note: input.value.trim(), date: new Date().toISOString(), author: 'coach' };
+  athleteCoachNotes[currentAthlete.id].push(note);
+  input.value = '';
+  // Also save to KV memory
+  fetch('/api/athlete-memory', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ athleteId: currentAthlete.id, action: 'add_note', data: note })
+  }).catch(() => {});
+  renderCoachNotesThread();
+}
+
+async function sendCoachDM() {
+  const input = document.getElementById('coach-dm-input');
+  if (!input?.value.trim() || !currentAthlete) return;
+  const text = input.value.trim();
+  input.value = '';
+
+  if (!athleteChatHistory[currentAthlete.id]) athleteChatHistory[currentAthlete.id] = [];
+  athleteChatHistory[currentAthlete.id].push({
+    role: 'user', sender: 'coach',
+    content: text,
+    timestamp: new Date().toISOString()
+  });
+
+  // Save to KV so athlete sees it
+  try {
+    await fetch('/api/chat-history', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        athleteId: currentAthlete.id,
+        action: 'append',
+        message: { role: 'user', sender: 'coach', content: text, timestamp: new Date().toISOString() }
+      })
+    });
+  } catch(e) {}
+
+  renderChatLog();
+}
+
+// ── GOAL vs ESTIMATE ──────────────────
+async function loadGoalVsEstimate() {
+  const a = currentAthlete;
+  if (!a) return;
+  try {
+    const mem = await fetchMemory(a.id);
+    const goalTime = mem?.goalTime;
+    if (!goalTime) { document.getElementById('goal-vs-estimate').style.display = 'none'; return; }
+
+    // Fill in goal time field
+    const gtInput = document.getElementById('mem-goal-time');
+    if (gtInput && !gtInput.value) gtInput.value = goalTime;
+
+    // Get latest estimate from athlete's activities
+    const acts = a.activities || [];
+    const recentRuns = acts.slice(0, 15).filter(x => (x.distance||0)/1609.34 > 1);
+    if (!recentRuns.length) return;
+
+    // Simple volume-based estimate (Riegel formula approximation)
+    const longRun = Math.max(...recentRuns.map(x => (x.distance||0)/1609.34));
+    const avgPaceSec = recentRuns.reduce((s,x) => {
+      const mi = (x.distance||0)/1609.34;
+      return mi > 0 ? s + (x.moving_time||0)/mi : s;
+    }, 0) / recentRuns.length;
+
+    // Marathon estimate: avg easy pace + 10% (rough)
+    const mEst = avgPaceSec * 26.2 * 1.1;
+    const mEstStr = `${Math.floor(mEst/3600)}:${String(Math.floor((mEst%3600)/60)).padStart(2,'0')}:${String(Math.round(mEst%60)).padStart(2,'0')}`;
+
+    // Parse goal time to seconds
+    const parts = goalTime.split(':').map(Number);
+    const goalSec = parts.length === 3 ? parts[0]*3600+parts[1]*60+parts[2] : parts[0]*3600+parts[1]*60;
+    const estSec = mEst;
+    const deltaSec = estSec - goalSec;
+    const deltaStr = (deltaSec >= 0 ? '+' : '') + Math.floor(Math.abs(deltaSec)/60) + 'min';
+    const deltaColor = Math.abs(deltaSec) < 600 ? 'var(--green)' : deltaSec > 1200 ? 'var(--red)' : 'var(--orange)';
+
+    document.getElementById('gve-goal').textContent = goalTime;
+    document.getElementById('gve-estimate').textContent = mEstStr;
+    document.getElementById('gve-delta').textContent = deltaStr;
+    document.getElementById('gve-delta').style.color = deltaColor;
+    document.getElementById('goal-vs-estimate').style.display = 'block';
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════
 // TABS
 // ══════════════════════════════════════
 function switchTab(id, el) {
@@ -1626,7 +2012,8 @@ function switchTab(id, el) {
   el.classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
   if (id === 'rx') loadRxTab();
-  if (id === 'instructions') renderInstructions();
+  if (id === 'instructions') { renderInstructions(); loadGoalVsEstimate(); }
+  if (id === 'chat') renderMessaging();
 }
 
 </script>
