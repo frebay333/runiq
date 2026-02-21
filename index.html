@@ -296,7 +296,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.5.0</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.5.1</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -335,7 +335,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.5.0</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.5.1</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="athlete-chip" id="athlete-chip">
@@ -1727,7 +1727,8 @@ Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No
         model:'claude-sonnet-4-20250514',
         max_tokens:1000,
         system: systemPrompt,
-        messages:[{role:'user', content:'Analyze my workout.'}]
+        messages:[{role:'user', content:'Analyze my workout.'}],
+        athleteId: APP.athlete ? APP.athlete.id : null
       })
     });
     const data = await res.json();
@@ -1737,6 +1738,10 @@ Give a SHORT post-workout reaction — 2-3 sentences, direct and data-driven. No
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
     APP.chatHistory.push({role:'assistant', content:text});
     setSuggestedReplies(getSuggestions());
+    // Auto-save workout summary to athlete memory
+    if (APP.athlete && APP.currentWorkout) {
+      autoSaveWorkoutSummary(APP.currentWorkout, text);
+    }
   } catch(e) {
     hideTyping();
     addMsg('ai', `Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`);
@@ -1785,7 +1790,8 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system: systemPrompt,
-        messages: APP.chatHistory
+        messages: APP.chatHistory,
+        athleteId: APP.athlete ? APP.athlete.id : null
       })
     });
     const data = await res.json();
@@ -1798,6 +1804,27 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
   }
+}
+
+async function autoSaveWorkoutSummary(workout, firstAiResponse) {
+  if (!APP.athlete) return;
+  try {
+    // Truncate to 200 chars for storage
+    const summary = firstAiResponse.slice(0, 200).replace(/\n/g, ' ');
+    await fetch('/api/athlete-memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: APP.athlete.id,
+        action: 'add_workout_summary',
+        data: {
+          workoutId: workout.id,
+          workoutName: workout.name,
+          summary
+        }
+      })
+    });
+  } catch(e) { console.warn('Memory save failed:', e); }
 }
 
 function pingCoach() {

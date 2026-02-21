@@ -384,44 +384,54 @@ background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='htt
         </div>
       </div>
 
-      <!-- ── TAB: AI INSTRUCTIONS ── -->
+      <!-- ── TAB: ATHLETE MEMORY ── -->
       <div class="tab-content" id="tab-instructions">
         <div class="instructions-layout">
+          <!-- LEFT COLUMN -->
           <div>
-            <div class="section-title">Standing AI Instructions</div>
-            <div class="card">
-              <div class="ib-label" style="margin-bottom:8px;">Active Directives</div>
-              <div id="instruction-tags"></div>
-              <div class="instruction-add">
-                <input class="instruction-input" type="text" id="new-instruction" placeholder="e.g. Never schedule back-to-back hard days" onkeydown="if(event.key==='Enter')addInstruction()">
-                <button class="instruction-add-btn" onclick="addInstruction()">+ Add</button>
+            <div class="section-title">Athlete Profile</div>
+            <div class="card" id="mem-profile-card">
+              <div class="ib-label" style="margin-bottom:10px;">Race Goal</div>
+              <input class="instruction-input" type="text" id="mem-goal" placeholder="e.g. Sub-3:30 marathon" style="margin-bottom:8px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <input class="instruction-input" type="text" id="mem-race" placeholder="Target Race (e.g. Boston 2026)">
+                <input class="instruction-input" type="text" id="mem-date" placeholder="Race Date (e.g. Apr 21 2026)">
               </div>
+              <div class="ib-label" style="margin-bottom:6px;margin-top:4px;">Coaching Notes (injected into every AI prompt)</div>
+              <textarea class="instruction-input" id="mem-prefs" style="width:100%;min-height:100px;resize:vertical;margin-bottom:10px;" placeholder="e.g. Responds well to data. Tends to overtrain — push back on adding miles. Goal is Boston qualifier."></textarea>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveMemoryProfile()">Save Profile →</button>
             </div>
 
+            <div class="section-title">Injury History</div>
             <div class="card">
-              <div class="ib-label">Injury & Restrictions</div>
-              <div id="restriction-tags"></div>
+              <div id="injury-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:20px;"></div>
               <div class="instruction-add">
-                <input class="instruction-input" type="text" id="new-restriction" placeholder="e.g. Left IT band — avoid >3% grade" onkeydown="if(event.key==='Enter')addRestriction()">
-                <button class="instruction-add-btn" onclick="addRestriction()">+ Add</button>
+                <input class="instruction-input" type="text" id="new-injury" placeholder="e.g. Left IT band, Plantar fasciitis" onkeydown="if(event.key==='Enter')addInjury()">
+                <button class="instruction-add-btn" onclick="addInjury()">+ Add</button>
               </div>
             </div>
           </div>
 
+          <!-- RIGHT COLUMN -->
           <div>
-            <div class="section-title">Coach Philosophy Notes</div>
+            <div class="section-title">Coach Notes Log</div>
             <div class="card">
-              <div class="ib-label" style="margin-bottom:8px;">AI Persona Guidance</div>
-              <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px;">Override how the AI communicates with this specific athlete, regardless of their persona selection.</div>
-              <textarea class="instruction-input" style="width:100%;min-height:120px;resize:vertical;margin-bottom:10px;" placeholder="e.g. This athlete responds well to data. Always lead with the numbers. She tends to overtrain — remind her that rest is part of the plan when she asks to add miles."></textarea>
-              <button class="btn btn-primary" style="width:100%;justify-content:center;">Save Guidance</button>
+              <div class="instruction-add" style="margin-bottom:10px;">
+                <input class="instruction-input" type="text" id="new-coach-note" placeholder="Add a coaching note..." onkeydown="if(event.key==='Enter')addCoachNote()">
+                <button class="instruction-add-btn" onclick="addCoachNote()">+ Add</button>
+              </div>
+              <div id="coach-notes-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
             </div>
 
+            <div class="section-title">AI Workout Summaries</div>
             <div class="card">
-              <div class="ib-label">AI Response Preview</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Test how the AI will respond with current instructions active.</div>
-              <input class="instruction-input" type="text" placeholder="Simulate athlete question..." style="margin-bottom:8px;">
-              <button class="btn btn-ghost" style="width:100%;justify-content:center;">Preview AI Response</button>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Auto-generated after each AI coaching session. Last 5 shown.</div>
+              <div id="workout-summaries-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            </div>
+
+            <div class="section-title">Memory Status</div>
+            <div class="card" id="memory-status-card">
+              <div id="memory-status-text" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">Loading...</div>
             </div>
           </div>
         </div>
@@ -967,9 +977,152 @@ function saveOverride(i) {
 // INSTRUCTIONS
 // ══════════════════════════════════════
 function renderInstructions() {
-  renderTags('instruction-tags', athleteInstructions[currentAthlete.id], 'instruction');
-  renderTags('restriction-tags', athleteRestrictions[currentAthlete.id], 'restriction');
+  loadAthleteMemory();
 }
+
+let _currentMemory = null;
+
+async function loadAthleteMemory() {
+  const a = currentAthlete;
+  if (!a) return;
+  try {
+    const res = await fetch(`/api/athlete-memory?athleteId=${a.id}`);
+    const mem = await res.json();
+    _currentMemory = mem;
+    populateMemoryUI(mem);
+  } catch(e) {
+    document.getElementById('memory-status-text').textContent = 'Failed to load memory.';
+  }
+}
+
+function populateMemoryUI(mem) {
+  // Profile fields
+  document.getElementById('mem-goal').value = mem.goal || '';
+  document.getElementById('mem-race').value = mem.targetRace || '';
+  document.getElementById('mem-date').value = mem.targetDate || '';
+  document.getElementById('mem-prefs').value = mem.athletePreferences || '';
+
+  // Injuries
+  const injuryEl = document.getElementById('injury-tags');
+  injuryEl.innerHTML = '';
+  (mem.injuryHistory || []).forEach(inj => {
+    injuryEl.innerHTML += `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:4px;padding:3px 8px;font-size:11px;color:#ef4444;">
+      ${inj} <span onclick="removeInjury('${inj.replace(/'/g, "\'")}');" style="cursor:pointer;opacity:.6;">✕</span>
+    </span>`;
+  });
+
+  // Coach notes
+  const notesEl = document.getElementById('coach-notes-list');
+  notesEl.innerHTML = '';
+  (mem.coachNotes || []).slice().reverse().forEach((n, i) => {
+    const realIdx = (mem.coachNotes.length - 1) - i;
+    const d = new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    notesEl.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:7px 10px;background:var(--s2);border-radius:4px;font-size:12px;">
+      <div><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-right:8px;">[${d}]</span>${n.note}</div>
+      <span onclick="deleteCoachNote(${realIdx});" style="cursor:pointer;color:var(--muted);font-size:10px;flex-shrink:0;">✕</span>
+    </div>`;
+  });
+
+  // Workout summaries
+  const summEl = document.getElementById('workout-summaries-list');
+  summEl.innerHTML = '';
+  const summaries = (mem.workoutSummaries || []).slice().reverse().slice(0, 5);
+  if (!summaries.length) {
+    summEl.innerHTML = '<div style="font-size:12px;color:var(--muted);">No sessions yet — AI will auto-log after first coaching chat.</div>';
+  } else {
+    summaries.forEach(s => {
+      const d = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      summEl.innerHTML += `<div style="padding:8px 10px;background:var(--s2);border-radius:4px;border-left:3px solid var(--accent);">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px;">[${d}] ${s.workoutName}</div>
+        <div style="font-size:12px;line-height:1.5;">${s.summary}</div>
+      </div>`;
+    });
+  }
+
+  // Status
+  const lastUpd = mem.lastUpdated ? new Date(mem.lastUpdated).toLocaleString() : 'Never';
+  const noteCount = (mem.coachNotes || []).length;
+  const summCount = (mem.workoutSummaries || []).length;
+  document.getElementById('memory-status-text').innerHTML =
+    `LAST UPDATED: ${lastUpd}<br>COACH NOTES: ${noteCount}<br>WORKOUT SUMMARIES: ${summCount}<br>STATUS: ${mem.empty ? 'EMPTY — no memory saved yet' : '✓ ACTIVE — injected into every AI prompt'}`;
+}
+
+async function saveMemoryProfile() {
+  const a = currentAthlete;
+  if (!a) return;
+  const btn = document.querySelector('[onclick="saveMemoryProfile()"]');
+  btn.textContent = 'Saving...';
+  try {
+    await fetch('/api/athlete-memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: a.id,
+        action: 'set_goal',
+        data: {
+          goal: document.getElementById('mem-goal').value,
+          targetRace: document.getElementById('mem-race').value,
+          targetDate: document.getElementById('mem-date').value,
+          athletePreferences: document.getElementById('mem-prefs').value,
+        }
+      })
+    });
+    btn.textContent = '✓ Saved';
+    setTimeout(() => { btn.textContent = 'Save Profile →'; }, 2000);
+    loadAthleteMemory();
+  } catch(e) { btn.textContent = 'Error — try again'; }
+}
+
+async function addCoachNote() {
+  const a = currentAthlete;
+  const input = document.getElementById('new-coach-note');
+  const note = input.value.trim();
+  if (!note || !a) return;
+  input.value = '';
+  await fetch('/api/athlete-memory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteId: a.id, action: 'add_note', data: { note, author: 'Coach' } })
+  });
+  loadAthleteMemory();
+}
+
+async function deleteCoachNote(index) {
+  const a = currentAthlete;
+  if (!a) return;
+  await fetch('/api/athlete-memory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteId: a.id, action: 'delete_note', data: { index } })
+  });
+  loadAthleteMemory();
+}
+
+async function addInjury() {
+  const a = currentAthlete;
+  const input = document.getElementById('new-injury');
+  const injury = input.value.trim();
+  if (!injury || !a) return;
+  input.value = '';
+  await fetch('/api/athlete-memory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteId: a.id, action: 'add_injury', data: { injury } })
+  });
+  loadAthleteMemory();
+}
+
+async function removeInjury(injury) {
+  const a = currentAthlete;
+  if (!a) return;
+  await fetch('/api/athlete-memory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ athleteId: a.id, action: 'remove_injury', data: { injury } })
+  });
+  loadAthleteMemory();
+}
+
 
 function renderTags(containerId, items, type) {
   const c = document.getElementById(containerId);
