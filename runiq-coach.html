@@ -1905,7 +1905,9 @@ async function loadChatHistoryFromKV(athleteId) {
   try {
     const res = await fetch(`/api/chat-history?athleteId=${athleteId}`);
     if (!res.ok) return;
-    const data = await res.json();
+    let data = await res.json();
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
     if (data && data.messages) {
       athleteChatHistory[athleteId] = data.messages;
     }

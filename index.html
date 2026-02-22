@@ -257,6 +257,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .msg-bubble{padding:10px 14px;border-radius:var(--r);font-size:13px;line-height:1.6;}
 .ai .msg-bubble{background:var(--s2);border:1px solid var(--border);border-top-left-radius:0;}
 .human-coach .msg-bubble{background:rgba(255,159,67,.07);border:1px solid rgba(255,159,67,.2);border-top-left-radius:0;}
+.msg.athlete-to-coach .msg-bubble{background:rgba(255,159,67,.04);border:1px dashed rgba(255,159,67,.3);border-top-right-radius:0;}
+.msg.athlete-to-coach .msg-sender{color:var(--orange);}
+.msg.athlete-to-coach-sent .msg-bubble{font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--orange);background:transparent;border:none;padding:2px 0;}
 .athlete .msg-bubble{background:rgba(232,255,71,.07);border:1px solid rgba(232,255,71,.18);border-top-right-radius:0;}
 
 .typing-indicator{display:none;align-self:flex-start;gap:10px;}
@@ -331,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.5</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.6</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -377,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.5</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.6</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -674,7 +677,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       </div>
       <div class="suggested-replies" id="suggested-replies"></div>
       <div class="chat-input-area">
-        <textarea class="chat-input" id="chat-input" placeholder="Talk to your coach..." rows="1"
+        <textarea class="chat-input" id="chat-input" placeholder="Ask AI anything, or @coach to message your coach" rows="1"
           onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
         <button class="ping-btn" id="ping-btn" onclick="pingCoach()">@ Coach</button>
         <button class="send-btn" onclick="sendMessage()">↑</button>
@@ -1632,6 +1635,7 @@ async function selectWorkout(activity, el) {
   APP.chatInitialized = true;
   // Try to restore saved conversation
   const hadHistory = loadChatHistory(detailed.id);
+  loadCoachTimeline(); // load any coach replies into right panel
   if (!hadHistory) {
     document.getElementById('analyze-bar').style.display = 'flex';
   }
@@ -2037,12 +2041,70 @@ function getSuggestions() {
   return s[APP.currentPersona] || s.neighborbob;
 }
 
+
+// ── COACH MESSAGING ──────────────────────────────────────────
+async function sendToCoachTimeline(text) {
+  if (!APP.athlete) return;
+  const msg = {
+    role: 'user',
+    sender: 'athlete',
+    content: text,
+    timestamp: new Date().toISOString(),
+    workoutContext: APP.currentWorkout ? APP.currentWorkout.name : null
+  };
+  try {
+    await fetch('/api/chat-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: APP.athlete.id,
+        action: 'append',
+        message: msg
+      })
+    });
+    addMsg('athlete-to-coach-sent', '✓ Message sent to coach');
+  } catch(e) {
+    addMsg('athlete-to-coach-sent', '⚠ Failed to send to coach');
+  }
+}
+
+async function loadCoachTimeline() {
+  if (!APP.athlete) return;
+  try {
+    const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}`);
+    if (!res.ok) return;
+    let data = await res.json();
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
+    const msgs = data?.messages || [];
+    // Show coach replies in the right panel
+    const panel = document.getElementById('coach-notes-panel');
+    if (!panel) return;
+    const coachMsgs = msgs.filter(m => m.sender === 'coach' || m.role === 'assistant');
+    if (!coachMsgs.length) return;
+    panel.innerHTML = '';
+    coachMsgs.slice(-5).forEach(m => {
+      const el = document.createElement('div');
+      el.className = 'coach-note';
+      el.innerHTML = `<div class="cn-header"><div class="cn-coach">Coach Mike</div><div class="cn-date">${m.timestamp ? new Date(m.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div></div><div class="cn-text">${(m.content||'').replace(/\n/g,'<br>')}</div>`;
+      panel.appendChild(el);
+    });
+  } catch(e) {}
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
   input.value = ''; input.style.height = 'auto';
   document.getElementById('suggested-replies').innerHTML = '';
+
+  // @coach mention — route to coach, don't send to AI
+  if (text.toLowerCase().startsWith('@coach')) {
+    addMsg('athlete-to-coach', text);
+    await sendToCoachTimeline(text);
+    return;
+  }
+
   addMsg('athlete', text);
   APP.chatHistory.push({role:'user', content:text});
   showTyping();
@@ -2124,10 +2186,7 @@ async function loadPrescribedWeek() {
 
   try {
     const res = await fetch(`/api/prescription?athleteId=${APP.athlete.id}&current=true`);
-    let rx = await res.json();
-    // Handle double-encoded string response from KV
-    if (typeof rx === 'string') { try { rx = JSON.parse(rx); } catch(e) {} }
-    if (typeof rx === 'string') { try { rx = JSON.parse(rx); } catch(e) {} }
+    const rx = await res.json();
     if (rx && !rx.empty) {
       APP_RX = rx;
       renderRxSidebar(rx);
@@ -2354,11 +2413,12 @@ function addMsg(role, text) {
   const container = document.getElementById('chat-messages');
   const el = document.createElement('div');
   const isAI = role === 'ai', isCoach = role === 'human-coach';
-  el.className = `msg ${isAI ? 'ai' : isCoach ? 'human-coach' : 'athlete'}`;
-  const avCls = isAI ? 'ai-av' : isCoach ? 'human-av' : 'athlete-av';
-  const avIcon = isAI ? '🤖' : isCoach ? '👨‍💼' : '🏃';
-  const senderCls = isAI ? 'ai-sender' : isCoach ? 'human-sender' : 'athlete-sender';
-  const senderLabel = isAI ? 'AI Coach' : isCoach ? 'Coach Mike' : 'You';
+  const isToCoach = role === 'athlete-to-coach', isToCoachSent = role === 'athlete-to-coach-sent';
+  el.className = `msg ${isAI ? 'ai' : isCoach ? 'human-coach' : isToCoach ? 'athlete-to-coach' : isToCoachSent ? 'athlete-to-coach-sent' : 'athlete'}`;
+  const avCls = isAI ? 'ai-av' : (isCoach) ? 'human-av' : 'athlete-av';
+  const avIcon = isAI ? '🤖' : isCoach ? '👨‍💼' : isToCoach || isToCoachSent ? '📨' : '🏃';
+  const senderCls = isAI ? 'ai-sender' : isCoach ? 'human-sender' : isToCoach ? 'human-sender' : 'athlete-sender';
+  const senderLabel = isAI ? 'AI Coach' : isCoach ? 'Coach Mike' : isToCoach ? '→ Coach' : isToCoachSent ? '' : 'You';
   el.innerHTML = `
     <div class="msg-avatar ${avCls}">${avIcon}</div>
     <div>
