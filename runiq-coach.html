@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.2</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.4</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -1973,6 +1973,22 @@ function renderChatLog() {
 
   container.innerHTML = '';
   history.forEach(msg => {
+    // AI disagreement flag — private coach-only warning
+    if (msg.sender === 'ai-flag') {
+      const el = document.createElement('div');
+      el.style.cssText = 'margin:4px 0;';
+      el.innerHTML = '<div style="padding:10px 14px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:8px;display:flex;gap:10px;align-items:flex-start;">' +
+        '<div style="font-size:16px;flex-shrink:0;">🚩</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:#ef4444;font-weight:600;margin-bottom:4px;">AI FLAG · PRIVATE · ' + (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '') + '</div>' +
+          '<div style="font-size:12px;line-height:1.5;color:var(--text);margin-bottom:6px;">' + (msg.content||'') + '</div>' +
+          '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);">AI said: "' + (msg.aiResponse||'').slice(0,120) + '..."</div>' +
+        '</div>' +
+      '</div>';
+      container.appendChild(el);
+      return;
+    }
+
     const isCoach = msg.sender === 'coach';
     const isAI = msg.sender === 'ai' || msg.role === 'assistant';
     const isAthlete = msg.sender === 'athlete' || (!isCoach && !isAI);
@@ -1987,17 +2003,17 @@ function renderChatLog() {
                    :           'background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.15)';
     const labelColor = isCoach ? 'var(--orange)' : isAI ? 'var(--ai-color)' : 'var(--green)';
     const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-    const ctx = msg.workoutContext ? `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);padding:3px 8px;background:var(--s3);border-radius:4px;margin-bottom:4px;display:inline-block;">⚡ ${msg.workoutContext}</div>` : '';
+    const ctx = msg.workoutContext ? '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);padding:3px 8px;background:var(--s3);border-radius:4px;margin-bottom:4px;display:inline-block;">⚡ ' + msg.workoutContext + '</div>' : '';
 
     const el = document.createElement('div');
     el.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
-    el.innerHTML = `
-      <div style="width:28px;height:28px;border-radius:50%;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">${icon}</div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:${labelColor};margin-bottom:3px;">${label}${time ? ' · ' + time : ''}</div>
-        ${ctx}
-        <div style="padding:9px 12px;${bubbleBg};border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||'').split('\n').join('<br>')}</div>
-      </div>`;
+    el.innerHTML =
+      '<div style="width:28px;height:28px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">' + icon + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:' + labelColor + ';margin-bottom:3px;">' + label + (time ? ' · ' + time : '') + '</div>' +
+        ctx +
+        '<div style="padding:9px 12px;' + bubbleBg + ';border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">' + (msg.content||'').split('\n').join('<br>') + '</div>' +
+      '</div>';
     container.appendChild(el);
   });
 
