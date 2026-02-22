@@ -334,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.0</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.1</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.0</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.1</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -736,6 +736,7 @@ const APP = {
   currentWorkout: null,
   currentPersona: 'neighborbob',
   chatHistory: [],
+  memory: null, // loaded from coach memory API
   chatInitialized: false,
   weeklyMi: [],
   excluded: new Set(),
@@ -904,6 +905,7 @@ async function loadStravaData() {
   try {
     // Athlete profile
     APP.athlete = await stravaGet('/athlete');
+    loadAthleteMemoryForAI();
 
     // Activities — 16 weeks back
     const acts = await stravaGet('/athlete/activities?per_page=200');
@@ -1897,6 +1899,18 @@ function initCoachChat() {
   // Don't auto-fire — user clicks Analyze
 }
 
+
+async function loadAthleteMemoryForAI() {
+  if (!APP.athlete || !APP.athlete.id || APP.athlete.id === 1) return;
+  try {
+    const res = await fetch(`/api/athlete-memory?athleteId=${APP.athlete.id}`);
+    if (!res.ok) return;
+    let mem = await res.json();
+    if (typeof mem === 'string') { try { mem = JSON.parse(mem); } catch(e) { return; } }
+    if (mem && !mem.empty) APP.memory = mem;
+  } catch(e) { console.warn('Memory load failed:', e); }
+}
+
 async function analyzeWorkout() {
   if (APP._chatRunning || APP._analyzed) return;
   APP._chatRunning = true;
@@ -1985,6 +1999,14 @@ async function analyzeWorkout() {
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
+  const memContext = APP.memory ? [
+    APP.memory.goal ? `ATHLETE GOAL: ${APP.memory.goal}` : null,
+    APP.memory.targetRace ? `TARGET RACE: ${APP.memory.targetRace}${APP.memory.targetDate ? ' on ' + APP.memory.targetDate : ''}` : null,
+    APP.memory.injuryHistory?.length ? `INJURY HISTORY: ${APP.memory.injuryHistory.join(', ')}` : null,
+    APP.memory.coachNotes?.length ? `COACH NOTES: ${APP.memory.coachNotes.slice(-3).map(n => n.note).join(' | ')}` : null,
+    APP.memory.athletePreferences ? `ATHLETE PREFERENCES: ${APP.memory.athletePreferences}` : null,
+  ].filter(Boolean).join('\n') : '';
+
   const systemPrompt = `${p.prompt}
 
 WORKOUT JUST COMPLETED:
@@ -1995,7 +2017,7 @@ ${weeklyContext}
 
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
-
+${memContext ? '\nCOACH CONTEXT:\n' + memContext : ''}
 Give a SHORT post-workout reaction — 2-3 sentences max. Reference the actual numbers. If the weekly volume is low for this point in the week, or there's been a multi-day gap, acknowledge it directly — ask what's going on, if they're sick, tired, busy. Don't ignore red flags. No exclamation points. No fluff. End with ONE question.
 
 IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity, heat, or environmental conditions unless the actual temperature or weather data is present in the activity data. If the run name references a city or location, do not assume weather conditions based on season or month — conditions vary widely. Only comment on conditions if concrete data supports it.`;
@@ -2124,11 +2146,17 @@ async function sendMessage() {
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
   const thisWeekActsSend = APP.activities.filter(x => new Date(x.start_date).getTime() >= (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (new Date().getDay()+6)%7); return d.getTime(); })());
+  const sendMemCtx = APP.memory ? [
+    APP.memory.goal ? `Goal: ${APP.memory.goal}` : null,
+    APP.memory.injuryHistory?.length ? `Injuries: ${APP.memory.injuryHistory.join(', ')}` : null,
+    APP.memory.coachNotes?.length ? `Coach notes: ${APP.memory.coachNotes.slice(-2).map(n => n.note).join(' | ')}` : null,
+  ].filter(Boolean).join('. ') : '';
+
   const systemPrompt = `${p.prompt}
 
 WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPaceMi(a))}/mi${a.average_heartrate ? `, HR ${Math.round(a.average_heartrate)}bpm avg` : ''}.
 THIS WEEK: ${thisWeekActsSend.length} run(s), ${thisWeekActsSend.reduce((s,x)=>s+actToMi(x),0).toFixed(1)} miles.
-RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.`;
+RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.${sendMemCtx ? ' COACH CONTEXT: ' + sendMemCtx : ''}`;
 
   try {
     const res = await fetch('/api/claude', {

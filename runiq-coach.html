@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.0</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.1</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -2032,6 +2032,17 @@ async function sendCoachAI() {
 
   _coachAIChatHistory.push({ role: 'user', content: text });
 
+  // Save coach context to athlete memory so athlete AI knows about it
+  fetch('/api/athlete-memory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      athleteId: currentAthlete.id,
+      action: 'add_note',
+      data: { note: '[Coach context] ' + text.slice(0, 200), author: 'Coach' }
+    })
+  }).catch(() => {});
+
   // Build context from athlete data + thread
   const a = currentAthlete;
   const thread = (athleteChatHistory[a.id] || []).slice(-10).map(m => '[' + (m.sender||'?') + ']: ' + (m.content||'')).join(' | ');
@@ -2061,6 +2072,19 @@ Give concise, actionable coaching advice. You can suggest what to say to the ath
     const data = await res.json();
     const reply = data.content?.[0]?.text || 'Error getting response.';
     _coachAIChatHistory.push({ role: 'assistant', content: reply });
+
+    // Save coach AI insights to athlete memory so athlete AI can use them
+    if (currentAthlete && reply.length > 20) {
+      fetch('/api/athlete-memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          athleteId: currentAthlete.id,
+          action: 'add_note',
+          data: { note: '[Coach AI] ' + reply.slice(0, 300).replace(/<br>/g, ' '), author: 'Coach AI' }
+        })
+      }).catch(() => {});
+    }
 
     typing.remove();
     const aiBubble = document.createElement('div');
