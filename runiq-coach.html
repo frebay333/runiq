@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.4.1</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.5</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -775,8 +775,8 @@ function initAthleteState() {
   ATHLETES.forEach(a => {
     athleteInstructions[a.id] = a.instructions ? [...a.instructions] : [];
     athleteRestrictions[a.id] = a.restrictions ? [...a.restrictions] : [];
-    athleteChatHistory[a.id] = [];
-    athleteCoachNotes[a.id] = [];
+    if (!athleteChatHistory[a.id]) athleteChatHistory[a.id] = [];
+    if (!athleteCoachNotes[a.id]) athleteCoachNotes[a.id] = [];
   });
 }
 
