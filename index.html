@@ -334,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.8</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.9</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.8</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.9</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -2380,12 +2380,29 @@ function checkRxGrade(activity) {
   return gradeResult;
 }
 
-function pingCoach() {
+async function pingCoach() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
   const btn = document.getElementById('ping-btn');
+
+  // Build message - use typed text or default ping
+  const msgText = text ? text : `@coach — please review this workout: ${APP.currentWorkout?.name || ''}`;
+  if (text) { input.value = ''; input.style.height = 'auto'; }
+
   btn.className = 'ping-btn pinged';
-  btn.textContent = '✓ Pinged';
-  addMsg('human-coach', `Coach Mike has been notified and will review this workout. Expected response within 24 hours.`);
-  // In production this would trigger a notification to the coach portal
+  btn.textContent = '✓ Sent';
+  setTimeout(() => { btn.className = 'ping-btn'; btn.textContent = '@ Coach'; }, 3000);
+
+  addMsg('athlete', msgText);
+
+  // Save to shared timeline so coach sees it
+  await saveMessageToTimeline({
+    role: 'user',
+    sender: 'athlete',
+    content: msgText,
+    timestamp: new Date().toISOString(),
+    workoutContext: APP.currentWorkout?.name || null
+  });
 }
 
 function saveChatHistory() {
