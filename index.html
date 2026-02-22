@@ -334,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.9</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.0</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.9</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.0</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -1629,16 +1629,20 @@ async function selectWorkout(activity, el) {
     if (existing) existing.remove();
   }
   document.getElementById('ping-btn').className = 'ping-btn';
-  document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
-  APP.chatHistory = [];
   APP.chatInitialized = true;
-  // Try to restore saved conversation
-  const hadHistory = loadChatHistory(detailed.id);
-  loadTimelineMessages(); startAthleteAutoRefresh();
-  if (!hadHistory) {
-    document.getElementById('analyze-bar').style.display = 'flex';
+  // Restore saved conversation for this workout (don't clear if switching back)
+  if (APP.currentWorkout?.id !== (APP._lastWorkoutId)) {
+    document.getElementById('chat-messages').innerHTML = '';
+    APP.chatHistory = [];
+    const hadHistory = loadChatHistory(detailed.id);
+    if (!hadHistory) {
+      document.getElementById('analyze-bar').style.display = 'flex';
+      document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);font-family:IBM Plex Mono,monospace;font-size:11px;">Click Analyze to start coaching this workout</div>';
+    }
   }
+  APP._lastWorkoutId = detailed.id;
+  loadTimelineMessages(); startAthleteAutoRefresh();
   renderWeeklySummary();
 }
 
@@ -2011,11 +2015,12 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     const data = await res.json();
     const text = data.content?.[0]?.text || 'Error getting response.';
     hideTyping();
+    document.getElementById('analyze-bar').style.display = 'none';
     addMsg('ai', text);
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
     APP.chatHistory.push({role:'assistant', content:text});
     setSuggestedReplies(getSuggestions());
-    // Auto-save workout summary to athlete memory
+    saveChatHistory();
     if (APP.athlete && APP.currentWorkout) {
       autoSaveWorkoutSummary(APP.currentWorkout, text);
     }
@@ -2150,6 +2155,7 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
       timestamp: new Date().toISOString(),
       workoutContext: APP.currentWorkout?.name || null
     });
+    saveChatHistory();
   } catch(e) {
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
@@ -2158,23 +2164,19 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
 
 
 async function autoSaveWorkoutSummary(workout, firstAiResponse) {
-  if (!APP.athlete) return;
+  if (!APP.athlete || !APP.athlete.id || APP.athlete.id === 1) return;
   try {
-    // Truncate to 200 chars for storage
     const summary = firstAiResponse.slice(0, 200).replace(/\n/g, ' ');
-    await fetch('/api/athlete-memory', {
+    const res = await fetch('/api/athlete-memory', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         athleteId: APP.athlete.id,
         action: 'add_workout_summary',
-        data: {
-          workoutId: workout.id,
-          workoutName: workout.name,
-          summary
-        }
+        data: { workoutId: workout.id, workoutName: workout.name, summary }
       })
     });
+    if (!res.ok) console.warn('Memory save failed:', res.status);
   } catch(e) { console.warn('Memory save failed:', e); }
 }
 
