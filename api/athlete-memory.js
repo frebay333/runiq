@@ -84,12 +84,17 @@ export default async function handler(req, res) {
         if (data.athletePreferences !== undefined) mem.athletePreferences = data.athletePreferences;
       }
       else if (action === 'add_note') {
-        mem.coachNotes.push({
-          date: new Date().toISOString(),
-          note: data.note,
-          author: data.author || 'Coach'
-        });
-        if (mem.coachNotes.length > 50) mem.coachNotes = mem.coachNotes.slice(-50);
+        // Support key/value fields (e.g. marathonEstimate)
+        if (data.key && data.value !== undefined) {
+          mem[data.key] = data.value;
+        } else {
+          mem.coachNotes.push({
+            date: new Date().toISOString(),
+            note: data.note,
+            author: data.author || 'Coach'
+          });
+          if (mem.coachNotes.length > 50) mem.coachNotes = mem.coachNotes.slice(-50);
+        }
       }
       else if (action === 'delete_note') {
         mem.coachNotes = mem.coachNotes.filter((_, i) => i !== data.index);
