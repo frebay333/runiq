@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.9</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.9.2</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -852,6 +852,23 @@ function filterRoster(v) { renderRoster(v); }
 // ══════════════════════════════════════
 // LOAD ATHLETE
 // ══════════════════════════════════════
+function renderCoachNotesThread() {
+  const container = document.getElementById('coach-notes-thread');
+  if (!container || !currentAthlete) return;
+  const notes = athleteCoachNotes[currentAthlete.id] || [];
+  container.innerHTML = '';
+  if (!notes.length) {
+    container.innerHTML = '<div style="padding:12px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);">No private notes yet.</div>';
+    return;
+  }
+  notes.forEach(n => {
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;';
+    el.innerHTML = '<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">' + (n.date ? new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Note') + ' · Private</div><div style="font-size:13px;line-height:1.5;color:var(--text);">' + n.note + '</div>';
+    container.appendChild(el);
+  });
+}
+
 function loadAthlete(a) {
   currentAthlete = a;
   // Don't clear cache - keep it for quick switching back
