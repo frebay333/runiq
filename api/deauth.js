@@ -1,4 +1,4 @@
-// api/deauth.js
+// api/deauth.js — v0.6.9
 // Deauthorizes a connected Strava athlete using their stored token
 // POST /api/deauth  body: { athleteId } or empty to deauth all
 
@@ -19,7 +19,15 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     const d = await r.json();
-    return d.result ? JSON.parse(d.result) : null;
+    let raw = d.result;
+    if (!raw) return null;
+    let attempts = 0;
+    while (typeof raw === 'string' && attempts < 3) {
+      try { raw = JSON.parse(raw); attempts++; } catch(e) { return null; }
+    }
+    if (Array.isArray(raw)) raw = raw[0];
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(e) { return null; } }
+    return typeof raw === 'object' && raw !== null ? raw : null;
   }
 
   async function kvKeys(pattern) {
