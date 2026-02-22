@@ -1,4 +1,4 @@
-// api/deauth.js — v0.6.9
+// api/deauth.js — v0.6.9.1
 // Deauthorizes a connected Strava athlete using their stored token
 // POST /api/deauth  body: { athleteId } or empty to deauth all
 

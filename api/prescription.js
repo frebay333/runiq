@@ -1,4 +1,4 @@
-// api/prescription.js
+// api/prescription.js — v0.6.9.1.1
 // Stores and retrieves weekly prescribed workouts per athlete
 // KV key: prescription:{athleteId}:{weekStart}  (weekStart = YYYY-MM-DD Monday)
 
@@ -18,10 +18,9 @@ export default async function handler(req, res) {
   // Store object as JSON string in KV — single encode only
   async function kvSet(key, value) {
     const payload = typeof value === 'string' ? value : JSON.stringify(value);
-    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
+    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(payload)}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     const result = await r.json();
     if (!r.ok) throw new Error(`KV set failed: ${JSON.stringify(result)}`);
@@ -34,12 +33,18 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     const d = await r.json();
-    const raw = d.result;
+    let raw = d.result;
     if (!raw) return null;
-    if (typeof raw === 'string') {
-      try { return JSON.parse(raw); } catch(e) { return null; }
+    // Handle single or double encoding - keep parsing until we get an object
+    let attempts = 0;
+    while (typeof raw === 'string' && attempts < 3) {
+      try { raw = JSON.parse(raw); attempts++; } catch(e) { return null; }
     }
-    return raw;
+    if (Array.isArray(raw)) raw = raw[0];
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch(e) { return null; }
+    }
+    return typeof raw === 'object' && raw !== null ? raw : null;
   }
 
   function getCurrentMonday() {

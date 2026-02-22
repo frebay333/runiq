@@ -1,4 +1,4 @@
-// api/chat-history.js — v0.6.6
+// api/chat-history.js — v0.6.9.1.1
 // Save and load chat conversations per athlete
 // Supports both per-workout keys and a rolling per-athlete timeline
 
@@ -17,10 +17,9 @@ export default async function handler(req, res) {
 
   async function kvSet(key, value) {
     const payload = typeof value === 'string' ? value : JSON.stringify(value);
-    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}`, {
+    const r = await fetch(`${KV_URL}/set/${encodeURIComponent(key)}/${encodeURIComponent(payload)}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${KV_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      headers: { Authorization: `Bearer ${KV_TOKEN}` }
     });
     if (!r.ok) throw new Error(`KV set failed: ${r.status}`);
     return r.json();
