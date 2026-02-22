@@ -1969,8 +1969,7 @@ function renderChatLog() {
       <div style="flex:1;min-width:0;">
         <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:${labelColor};margin-bottom:3px;">${label}${time ? ' · ' + time : ''}</div>
         ${ctx}
-        <div style="padding:9px 12px;${bubbleBg};border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||'').replace(/
-/g,'<br>')}</div>
+        <div style="padding:9px 12px;${bubbleBg};border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||'').split('\n').join('<br>')}</div>
       </div>`;
     container.appendChild(el);
   });
