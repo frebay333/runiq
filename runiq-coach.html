@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.6</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.7</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -2168,10 +2168,11 @@ async function loadGoalVsEstimate() {
     const mEstStr = calcMarathonEstimate(a);
     if (!mEstStr) return;
 
-    // Parse goal time to seconds
-    const parts = goalTime.split(':').map(Number);
-    const goalSec = parts.length === 3 ? parts[0]*3600+parts[1]*60+parts[2] : parts[0]*3600+parts[1]*60;
-    const estSec = mEst;
+    // Parse both times to seconds for delta
+    const eParts = mEstStr.split(':').map(Number);
+    const estSec = eParts[0]*3600 + eParts[1]*60 + (eParts[2]||0);
+    const gParts = goalTime.split(':').map(Number);
+    const goalSec = gParts.length === 3 ? gParts[0]*3600+gParts[1]*60+gParts[2] : gParts[0]*3600+gParts[1]*60;
     const deltaSec = estSec - goalSec;
     const deltaStr = (deltaSec >= 0 ? '+' : '') + Math.floor(Math.abs(deltaSec)/60) + 'min';
     const deltaColor = Math.abs(deltaSec) < 600 ? 'var(--green)' : deltaSec > 1200 ? 'var(--red)' : 'var(--orange)';
