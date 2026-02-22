@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.4</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.4.1</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -2065,12 +2065,12 @@ async function sendCoachAI() {
   const acts = a.activities || [];
   const recentRuns = acts.slice(0, 5).map(x => `${x.name} ${((x.distance||0)/1609.34).toFixed(1)}mi @ ${x.average_heartrate ? Math.round(x.average_heartrate)+'bpm' : 'no HR'}`).join(', ');
 
-  const systemPrompt = `You are a running coach assistant. Be extremely brief — 1-2 sentences max. Matter-of-fact, no fluff.
+  const systemPrompt = `You are an AI assistant helping a COACH manage their athletes. You are talking to THE COACH, not the athlete. Never address the coach as if they are the athlete. Never say things like "run your 9 miles" or "your training" — the coach is not the one running.
 
-ATHLETE: ${a.name} | GOAL: ${a.goal || 'Marathon'} | RECENT: ${recentRuns || 'no data'}
-THREAD: ${thread || 'none'}
+ATHLETE YOU ARE DISCUSSING: ${a.name} | GOAL: ${a.goal || 'Marathon'} | RECENT RUNS: ${recentRuns || 'no data'}
+ATHLETE CHAT THREAD (context only): ${thread || 'none'}
 
-Respond like a busy coach glancing at notes. Flag concerns in one line. Suggest one action. Never write paragraphs.`;
+Be extremely brief — 1-2 sentences max. Talk to the coach as a colleague. Example: "She's ready for 9 miles, durability is there." Never write paragraphs. Never address the coach as the athlete.`;
 
   try {
     const res = await fetch('/api/claude', {
