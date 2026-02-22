@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.5</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.6</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -955,6 +955,21 @@ function computeAthleteStats(a) {
   };
 }
 
+function calcMarathonEstimate(a) {
+  const acts = a.activities || [];
+  const recentRuns = acts.slice(0, 15).filter(x => (x.distance||0)/1609.34 > 1);
+  if (!recentRuns.length) return null;
+  const avgPaceSec = recentRuns.reduce((s,x) => {
+    const mi = (x.distance||0)/1609.34;
+    return mi > 0 ? s + (x.moving_time||0)/mi : s;
+  }, 0) / recentRuns.length;
+  const mEst = avgPaceSec * 26.2 * 1.1;
+  const h = Math.floor(mEst/3600);
+  const m = Math.floor((mEst%3600)/60);
+  const s = Math.round(mEst%60);
+  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
 function renderOverview() {
   const a = currentAthlete;
   if (!a) return;
@@ -968,8 +983,10 @@ function renderOverview() {
   }
 
   // Header: name + race info
+  const estTimeCalc = calcMarathonEstimate(a);
+  const estDisplay = estTimeCalc || a.estTime || '—';
   document.getElementById('overview-athlete-name').innerHTML =
-    `${a.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${a.goal} · ${a.nextRaceDate} · Est. ${a.estTime}</span>`;
+    `${a.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${a.goal} · ${a.nextRaceDate} · Est. ${estDisplay}</span>`;
 
   const statsEl = document.getElementById('overview-stats');
   statsEl.innerHTML = '';
@@ -2147,21 +2164,9 @@ async function loadGoalVsEstimate() {
     const gtInput = document.getElementById('mem-goal-time');
     if (gtInput && !gtInput.value) gtInput.value = goalTime;
 
-    // Get latest estimate from athlete's activities
-    const acts = a.activities || [];
-    const recentRuns = acts.slice(0, 15).filter(x => (x.distance||0)/1609.34 > 1);
-    if (!recentRuns.length) return;
-
-    // Simple volume-based estimate (Riegel formula approximation)
-    const longRun = Math.max(...recentRuns.map(x => (x.distance||0)/1609.34));
-    const avgPaceSec = recentRuns.reduce((s,x) => {
-      const mi = (x.distance||0)/1609.34;
-      return mi > 0 ? s + (x.moving_time||0)/mi : s;
-    }, 0) / recentRuns.length;
-
-    // Marathon estimate: avg easy pace + 10% (rough)
-    const mEst = avgPaceSec * 26.2 * 1.1;
-    const mEstStr = `${Math.floor(mEst/3600)}:${String(Math.floor((mEst%3600)/60)).padStart(2,'0')}:${String(Math.round(mEst%60)).padStart(2,'0')}`;
+    // Use shared estimator
+    const mEstStr = calcMarathonEstimate(a);
+    if (!mEstStr) return;
 
     // Parse goal time to seconds
     const parts = goalTime.split(':').map(Number);
