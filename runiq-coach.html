@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.7</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.8</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -956,6 +956,9 @@ function computeAthleteStats(a) {
 }
 
 function calcMarathonEstimate(a) {
+  // Prefer the saved estimate from the athlete's Race Time Estimator page
+  if (a._marathonEstimate) return a._marathonEstimate;
+  // Fallback: simple avg pace calc
   const acts = a.activities || [];
   const recentRuns = acts.slice(0, 15).filter(x => (x.distance||0)/1609.34 > 1);
   if (!recentRuns.length) return null;
@@ -966,8 +969,8 @@ function calcMarathonEstimate(a) {
   const mEst = avgPaceSec * 26.2 * 1.1;
   const h = Math.floor(mEst/3600);
   const m = Math.floor((mEst%3600)/60);
-  const s = Math.round(mEst%60);
-  return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const sc = Math.round(mEst%60);
+  return h + ':' + String(m).padStart(2,'0') + ':' + String(sc).padStart(2,'0');
 }
 
 function renderOverview() {
@@ -1219,6 +1222,7 @@ function populateMemoryUI(mem) {
     if (mem.targetRace) currentAthlete.nextRaceDate = mem.targetRace;
     if (mem.targetDate) currentAthlete.nextRaceDate = mem.targetDate;
     if (mem.goalTime) currentAthlete.estTime = mem.goalTime;
+    if (mem.marathonEstimate) currentAthlete._marathonEstimate = mem.marathonEstimate;
     // Re-render the overview header with updated info
     const hdrEl = document.getElementById('overview-athlete-name');
     if (hdrEl) {

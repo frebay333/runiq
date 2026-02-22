@@ -257,9 +257,6 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .msg-bubble{padding:10px 14px;border-radius:var(--r);font-size:13px;line-height:1.6;}
 .ai .msg-bubble{background:var(--s2);border:1px solid var(--border);border-top-left-radius:0;}
 .human-coach .msg-bubble{background:rgba(255,159,67,.07);border:1px solid rgba(255,159,67,.2);border-top-left-radius:0;}
-.msg.athlete-to-coach .msg-bubble{background:rgba(255,159,67,.04);border:1px dashed rgba(255,159,67,.3);border-top-right-radius:0;}
-.msg.athlete-to-coach .msg-sender{color:var(--orange);}
-.msg.athlete-to-coach-sent .msg-bubble{font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--orange);background:transparent;border:none;padding:2px 0;}
 .athlete .msg-bubble{background:rgba(232,255,71,.07);border:1px solid rgba(232,255,71,.18);border-top-right-radius:0;}
 
 .typing-indicator{display:none;align-self:flex-start;gap:10px;}
@@ -334,7 +331,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.4</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.0</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +377,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.4</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.0</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -677,7 +674,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       </div>
       <div class="suggested-replies" id="suggested-replies"></div>
       <div class="chat-input-area">
-        <textarea class="chat-input" id="chat-input" placeholder="Ask your AI coach anything..." rows="1"
+        <textarea class="chat-input" id="chat-input" placeholder="Talk to your coach..." rows="1"
           onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
         <button class="ping-btn" id="ping-btn" onclick="pingCoach()">@ Coach</button>
         <button class="send-btn" onclick="sendMessage()">↑</button>
@@ -736,7 +733,6 @@ const APP = {
   currentWorkout: null,
   currentPersona: 'neighborbob',
   chatHistory: [],
-  memory: null, // loaded from coach memory API
   chatInitialized: false,
   weeklyMi: [],
   excluded: new Set(),
@@ -905,7 +901,6 @@ async function loadStravaData() {
   try {
     // Athlete profile
     APP.athlete = await stravaGet('/athlete');
-    loadAthleteMemoryForAI();
 
     // Activities — 16 weeks back
     const acts = await stravaGet('/athlete/activities?per_page=200');
@@ -1112,6 +1107,23 @@ function updateEstimates() {
   });
 
   drawVolChart(weeks);
+
+  // Save marathon estimate to athlete memory so coach portal can read it
+  if (APP.athlete && APP.athlete.id && APP.athlete.id !== 1 && tm) {
+    const h = Math.floor(tm/3600);
+    const mn = Math.floor((tm%3600)/60);
+    const sc = Math.round(tm%60);
+    const estStr = h + ':' + String(mn).padStart(2,'0') + ':' + String(sc).padStart(2,'0');
+    fetch('/api/athlete-memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: APP.athlete.id,
+        action: 'add_note',
+        data: { key: 'marathonEstimate', value: estStr }
+      })
+    }).catch(() => {});
+  }
 }
 
 function estimateFromData(acts, weeks, method, avgMpw) {
@@ -1512,26 +1524,15 @@ function renderSettingsPersonas() {
 function setPersona(id, silent) {
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
-  const prevPersona = APP.currentPersona;
   APP.currentPersona = id;
   renderSettingsPersonas();
   saveSettings();
-  if (!silent && id !== prevPersona) {
+  if (!silent) {
     document.getElementById('settings-dropdown').classList.remove('open');
-    document.getElementById('suggested-replies').innerHTML = '';
-    // Don't clear chat - just add a system note
-    const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
-    const personas = KB ? KB.personas : {};
-    const newP = personas[id];
-    if (newP && document.getElementById('chat-messages')) {
-      const note = document.createElement('div');
-      note.style.cssText = 'text-align:center;padding:6px 12px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);border-top:1px solid var(--border);margin:8px 0;';
-      note.textContent = `— Switched to ${newP.icon || ''} ${newP.name} —`;
-      document.getElementById('chat-messages').appendChild(note);
-      document.getElementById('chat-messages').scrollTop = 999999;
-    }
-    // Reset AI history so new persona starts fresh context-wise
     APP.chatHistory = [];
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('suggested-replies').innerHTML = '';
+    document.getElementById('analyze-bar').style.display = 'flex';
   }
 }
 
@@ -1642,20 +1643,15 @@ async function selectWorkout(activity, el) {
     if (existing) existing.remove();
   }
   document.getElementById('ping-btn').className = 'ping-btn';
+  document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
+  APP.chatHistory = [];
   APP.chatInitialized = true;
-  // Restore saved conversation for this workout (don't clear if switching back)
-  if (APP.currentWorkout?.id !== (APP._lastWorkoutId)) {
-    document.getElementById('chat-messages').innerHTML = '';
-    APP.chatHistory = [];
-    const hadHistory = loadChatHistory(detailed.id);
-    if (!hadHistory) {
-      document.getElementById('analyze-bar').style.display = 'flex';
-      document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);font-family:IBM Plex Mono,monospace;font-size:11px;">Click Analyze to start coaching this workout</div>';
-    }
+  // Try to restore saved conversation
+  const hadHistory = loadChatHistory(detailed.id);
+  if (!hadHistory) {
+    document.getElementById('analyze-bar').style.display = 'flex';
   }
-  APP._lastWorkoutId = detailed.id;
-  loadTimelineMessages(); startAthleteAutoRefresh();
   renderWeeklySummary();
 }
 
@@ -1910,18 +1906,6 @@ function initCoachChat() {
   // Don't auto-fire — user clicks Analyze
 }
 
-
-async function loadAthleteMemoryForAI() {
-  if (!APP.athlete || !APP.athlete.id || APP.athlete.id === 1) return;
-  try {
-    const res = await fetch(`/api/athlete-memory?athleteId=${APP.athlete.id}`);
-    if (!res.ok) return;
-    let mem = await res.json();
-    if (typeof mem === 'string') { try { mem = JSON.parse(mem); } catch(e) { return; } }
-    if (mem && !mem.empty) APP.memory = mem;
-  } catch(e) { console.warn('Memory load failed:', e); }
-}
-
 async function analyzeWorkout() {
   if (APP._chatRunning || APP._analyzed) return;
   APP._chatRunning = true;
@@ -2010,14 +1994,6 @@ async function analyzeWorkout() {
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
-  const memContext = APP.memory ? [
-    APP.memory.goal ? `ATHLETE GOAL: ${APP.memory.goal}` : null,
-    APP.memory.targetRace ? `TARGET RACE: ${APP.memory.targetRace}${APP.memory.targetDate ? ' on ' + APP.memory.targetDate : ''}` : null,
-    APP.memory.injuryHistory?.length ? `INJURY HISTORY: ${APP.memory.injuryHistory.join(', ')}` : null,
-    APP.memory.coachNotes?.length ? `REAL COACH INSTRUCTIONS (follow these, they override your own judgment): ${APP.memory.coachNotes.filter(n=>!n.note.startsWith('[Coach AI]')).slice(-3).map(n => n.note).join(' | ')}` : null,
-    APP.memory.athletePreferences ? `ATHLETE PREFERENCES: ${APP.memory.athletePreferences}` : null,
-  ].filter(Boolean).join('\n') : '';
-
   const systemPrompt = `${p.prompt}
 
 WORKOUT JUST COMPLETED:
@@ -2028,7 +2004,7 @@ ${weeklyContext}
 
 RECENT TRAINING CONTEXT (last 5 activities):
 ${recentContext}
-${memContext ? '\nCOACH CONTEXT:\n' + memContext : ''}
+
 Give a SHORT post-workout reaction — 2-3 sentences max. Reference the actual numbers. If the weekly volume is low for this point in the week, or there's been a multi-day gap, acknowledge it directly — ask what's going on, if they're sick, tired, busy. Don't ignore red flags. No exclamation points. No fluff. End with ONE question.
 
 IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity, heat, or environmental conditions unless the actual temperature or weather data is present in the activity data. If the run name references a city or location, do not assume weather conditions based on season or month — conditions vary widely. Only comment on conditions if concrete data supports it.`;
@@ -2048,17 +2024,13 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     const data = await res.json();
     const text = data.content?.[0]?.text || 'Error getting response.';
     hideTyping();
-    document.getElementById('analyze-bar').style.display = 'none';
     addMsg('ai', text);
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
     APP.chatHistory.push({role:'assistant', content:text});
     setSuggestedReplies(getSuggestions());
-    saveChatHistory();
+    // Auto-save workout summary to athlete memory
     if (APP.athlete && APP.currentWorkout) {
       autoSaveWorkoutSummary(APP.currentWorkout, text);
-    }
-    if (APP.memory?.coachNotes?.length) {
-      checkAIDisagreement(text, APP.memory.coachNotes);
     }
   } catch(e) {
     hideTyping();
@@ -2082,142 +2054,14 @@ function getSuggestions() {
   return s[APP.currentPersona] || s.neighborbob;
 }
 
-
-// ── UNIFIED CHAT ─────────────────────────────────────────────
-let _chatAutoRefresh = null;
-
-function startAthleteAutoRefresh() {
-  stopAthleteAutoRefresh();
-  _chatAutoRefresh = setInterval(loadTimelineMessages, 15000);
-}
-
-function stopAthleteAutoRefresh() {
-  if (_chatAutoRefresh) { clearInterval(_chatAutoRefresh); _chatAutoRefresh = null; }
-}
-
-async function loadTimelineMessages() {
-  if (!APP.athlete) return;
-  try {
-    const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}`);
-    if (!res.ok) return;
-    let data = await res.json();
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
-    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
-    const msgs = data?.messages || [];
-
-    // Show coach messages in BOTH the chat window AND the coach notes panel
-    const coachMsgs = msgs.filter(m => m.sender === 'coach');
-
-    // Right panel: coach notes
-    const panel = document.getElementById('coach-notes-panel');
-    if (panel && coachMsgs.length) {
-      panel.innerHTML = '';
-      coachMsgs.slice(-5).forEach(m => {
-        const el = document.createElement('div');
-        el.className = 'coach-note';
-        const time = m.timestamp ? new Date(m.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
-        el.innerHTML = '<div class="cn-header"><div class="cn-coach">Coach Mike</div><div class="cn-date">' + time + '</div></div><div class="cn-text">' + (m.content||'').replace(/\n/g,'<br>') + '</div>';
-        panel.appendChild(el);
-      });
-    }
-
-    // Main chat window: inject any coach messages not already shown
-    const chatEl = document.getElementById('chat-messages');
-    if (chatEl && coachMsgs.length) {
-      const existingIds = new Set(
-        Array.from(chatEl.querySelectorAll('[data-msg-id]')).map(el => el.dataset.msgId)
-      );
-      coachMsgs.forEach(m => {
-        const msgId = m.timestamp + '_coach';
-        if (existingIds.has(msgId)) return;
-        const wrapper = document.createElement('div');
-        wrapper.className = 'msg human-coach';
-        wrapper.dataset.msgId = msgId;
-        wrapper.innerHTML = '<div class="av human-av">👨‍💼</div><div class="msg-body"><div class="sender human-sender">Coach Mike</div><div class="bubble">' + (m.content||'') + '</div></div>';
-        chatEl.appendChild(wrapper);
-      });
-      chatEl.scrollTop = chatEl.scrollHeight;
-    }
-  } catch(e) {}
-}
-
-
-async function checkAIDisagreement(aiReply, coachNotes) {
-  if (!coachNotes || !coachNotes.length || !APP.athlete || APP.athlete.id === 1) return;
-  // Only check real coach notes, not AI-generated ones
-  const realNotes = coachNotes.filter(n => !n.note.startsWith('[Coach AI]')).slice(-3);
-  if (!realNotes.length) return;
-
-  const notesText = realNotes.map(n => n.note).join(' | ');
-
-  try {
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-client-side-api-keys': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
-        messages: [{
-          role: 'user',
-          content: 'Coach instructions: "' + notesText + '"\n\nAI response to athlete: "' + aiReply.slice(0, 300) + '"\n\nDoes the AI response contradict or go against the coach instructions? Reply with ONLY: YES: [one sentence why] or NO'
-        }]
-      })
-    });
-    const data = await res.json();
-    const verdict = data.content?.[0]?.text || '';
-    if (!verdict.trim().startsWith('YES')) return;
-
-    // Flag it privately in coach timeline
-    const reason = verdict.replace(/^YES:\s*/i, '').trim();
-    await saveMessageToTimeline({
-      role: 'system',
-      sender: 'ai-flag',
-      content: reason,
-      aiResponse: aiReply.slice(0, 200),
-      coachInstructions: notesText,
-      timestamp: new Date().toISOString(),
-      workoutContext: APP.currentWorkout?.name || null
-    });
-  } catch(e) { /* silent fail */ }
-}
-
-async function saveMessageToTimeline(msg) {
-  if (!APP.athlete) return;
-  try {
-    await fetch('/api/chat-history', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ athleteId: APP.athlete.id, action: 'append', message: msg })
-    });
-  } catch(e) { console.warn('Timeline save failed:', e); }
-}
-
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
   input.value = ''; input.style.height = 'auto';
   document.getElementById('suggested-replies').innerHTML = '';
-
-  const athleteMsg = {
-    role: 'user',
-    sender: 'athlete',
-    content: text,
-    timestamp: new Date().toISOString(),
-    workoutContext: APP.currentWorkout?.name || null
-  };
-
   addMsg('athlete', text);
   APP.chatHistory.push({role:'user', content:text});
-  
-  // Save athlete message to shared timeline
-  await saveMessageToTimeline(athleteMsg);
-
   showTyping();
 
   const a = APP.currentWorkout;
@@ -2226,17 +2070,11 @@ async function sendMessage() {
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
 
   const thisWeekActsSend = APP.activities.filter(x => new Date(x.start_date).getTime() >= (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (new Date().getDay()+6)%7); return d.getTime(); })());
-  const sendMemCtx = APP.memory ? [
-    APP.memory.goal ? `Goal: ${APP.memory.goal}` : null,
-    APP.memory.injuryHistory?.length ? `Injuries: ${APP.memory.injuryHistory.join(', ')}` : null,
-    APP.memory.coachNotes?.length ? `REAL COACH SAYS (follow this): ${APP.memory.coachNotes.filter(n=>!n.note.startsWith('[Coach AI]')).slice(-2).map(n => n.note).join(' | ')}` : null,
-  ].filter(Boolean).join('. ') : '';
-
   const systemPrompt = `${p.prompt}
 
 WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPaceMi(a))}/mi${a.average_heartrate ? `, HR ${Math.round(a.average_heartrate)}bpm avg` : ''}.
 THIS WEEK: ${thisWeekActsSend.length} run(s), ${thisWeekActsSend.reduce((s,x)=>s+actToMi(x),0).toFixed(1)} miles.
-RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.${sendMemCtx ? ' COACH CONTEXT: ' + sendMemCtx : ''}`;
+RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.`;
 
   try {
     const res = await fetch('/api/claude', {
@@ -2254,41 +2092,30 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     addMsg('ai', reply);
     APP.chatHistory.push({role:'assistant', content:reply});
     setSuggestedReplies([]);
-
-    // Save AI response to shared timeline so coach sees it
-    await saveMessageToTimeline({
-      role: 'assistant',
-      sender: 'ai',
-      content: reply,
-      timestamp: new Date().toISOString(),
-      workoutContext: APP.currentWorkout?.name || null
-    });
-    saveChatHistory();
-    // Check if AI contradicts coach notes — silently flag if so
-    if (APP.memory?.coachNotes?.length) {
-      checkAIDisagreement(reply, APP.memory.coachNotes);
-    }
   } catch(e) {
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
   }
 }
 
-
 async function autoSaveWorkoutSummary(workout, firstAiResponse) {
-  if (!APP.athlete || !APP.athlete.id || APP.athlete.id === 1) return;
+  if (!APP.athlete) return;
   try {
+    // Truncate to 200 chars for storage
     const summary = firstAiResponse.slice(0, 200).replace(/\n/g, ' ');
-    const res = await fetch('/api/athlete-memory', {
+    await fetch('/api/athlete-memory', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         athleteId: APP.athlete.id,
         action: 'add_workout_summary',
-        data: { workoutId: workout.id, workoutName: workout.name, summary }
+        data: {
+          workoutId: workout.id,
+          workoutName: workout.name,
+          summary
+        }
       })
     });
-    if (!res.ok) console.warn('Memory save failed:', res.status);
   } catch(e) { console.warn('Memory save failed:', e); }
 }
 
@@ -2494,29 +2321,12 @@ function checkRxGrade(activity) {
   return gradeResult;
 }
 
-async function pingCoach() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
+function pingCoach() {
   const btn = document.getElementById('ping-btn');
-
-  // Build message - use typed text or default ping
-  const msgText = text ? text : `@coach — please review this workout: ${APP.currentWorkout?.name || ''}`;
-  if (text) { input.value = ''; input.style.height = 'auto'; }
-
   btn.className = 'ping-btn pinged';
-  btn.textContent = '✓ Sent';
-  setTimeout(() => { btn.className = 'ping-btn'; btn.textContent = '@ Coach'; }, 3000);
-
-  addMsg('athlete', msgText);
-
-  // Save to shared timeline so coach sees it
-  await saveMessageToTimeline({
-    role: 'user',
-    sender: 'athlete',
-    content: msgText,
-    timestamp: new Date().toISOString(),
-    workoutContext: APP.currentWorkout?.name || null
-  });
+  btn.textContent = '✓ Pinged';
+  addMsg('human-coach', `Coach Mike has been notified and will review this workout. Expected response within 24 hours.`);
+  // In production this would trigger a notification to the coach portal
 }
 
 function saveChatHistory() {
