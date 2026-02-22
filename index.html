@@ -334,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.6</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.8</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.6</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.8</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -677,7 +677,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       </div>
       <div class="suggested-replies" id="suggested-replies"></div>
       <div class="chat-input-area">
-        <textarea class="chat-input" id="chat-input" placeholder="Ask AI anything, or @coach to message your coach" rows="1"
+        <textarea class="chat-input" id="chat-input" placeholder="Ask your AI coach anything..." rows="1"
           onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
         <button class="ping-btn" id="ping-btn" onclick="pingCoach()">@ Coach</button>
         <button class="send-btn" onclick="sendMessage()">↑</button>
@@ -1635,7 +1635,7 @@ async function selectWorkout(activity, el) {
   APP.chatInitialized = true;
   // Try to restore saved conversation
   const hadHistory = loadChatHistory(detailed.id);
-  loadCoachTimeline(); // load any coach replies into right panel
+  loadTimelineMessages(); startAthleteAutoRefresh();
   if (!hadHistory) {
     document.getElementById('analyze-bar').style.display = 'flex';
   }
@@ -2042,53 +2042,52 @@ function getSuggestions() {
 }
 
 
-// ── COACH MESSAGING ──────────────────────────────────────────
-async function sendToCoachTimeline(text) {
-  if (!APP.athlete) return;
-  const msg = {
-    role: 'user',
-    sender: 'athlete',
-    content: text,
-    timestamp: new Date().toISOString(),
-    workoutContext: APP.currentWorkout ? APP.currentWorkout.name : null
-  };
-  try {
-    await fetch('/api/chat-history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        athleteId: APP.athlete.id,
-        action: 'append',
-        message: msg
-      })
-    });
-    addMsg('athlete-to-coach-sent', '✓ Message sent to coach');
-  } catch(e) {
-    addMsg('athlete-to-coach-sent', '⚠ Failed to send to coach');
-  }
+// ── UNIFIED CHAT ─────────────────────────────────────────────
+let _chatAutoRefresh = null;
+
+function startAthleteAutoRefresh() {
+  stopAthleteAutoRefresh();
+  _chatAutoRefresh = setInterval(loadTimelineMessages, 15000);
 }
 
-async function loadCoachTimeline() {
+function stopAthleteAutoRefresh() {
+  if (_chatAutoRefresh) { clearInterval(_chatAutoRefresh); _chatAutoRefresh = null; }
+}
+
+async function loadTimelineMessages() {
   if (!APP.athlete) return;
   try {
     const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}`);
     if (!res.ok) return;
     let data = await res.json();
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
     const msgs = data?.messages || [];
-    // Show coach replies in the right panel
+    // Only show coach messages in the right panel (coach replies)
+    const coachMsgs = msgs.filter(m => m.sender === 'coach');
     const panel = document.getElementById('coach-notes-panel');
-    if (!panel) return;
-    const coachMsgs = msgs.filter(m => m.sender === 'coach' || m.role === 'assistant');
-    if (!coachMsgs.length) return;
-    panel.innerHTML = '';
-    coachMsgs.slice(-5).forEach(m => {
-      const el = document.createElement('div');
-      el.className = 'coach-note';
-      el.innerHTML = `<div class="cn-header"><div class="cn-coach">Coach Mike</div><div class="cn-date">${m.timestamp ? new Date(m.timestamp).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</div></div><div class="cn-text">${(m.content||'').replace(/\n/g,'<br>')}</div>`;
-      panel.appendChild(el);
-    });
+    if (panel && coachMsgs.length) {
+      panel.innerHTML = '';
+      coachMsgs.slice(-5).forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'coach-note';
+        const time = m.timestamp ? new Date(m.timestamp).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+        el.innerHTML = `<div class="cn-header"><div class="cn-coach">Coach Mike</div><div class="cn-date">${time}</div></div><div class="cn-text">${(m.content||'').replace(/\n/g,'<br>')}</div>`;
+        panel.appendChild(el);
+      });
+    }
   } catch(e) {}
+}
+
+async function saveMessageToTimeline(msg) {
+  if (!APP.athlete) return;
+  try {
+    await fetch('/api/chat-history', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ athleteId: APP.athlete.id, action: 'append', message: msg })
+    });
+  } catch(e) { console.warn('Timeline save failed:', e); }
 }
 
 async function sendMessage() {
@@ -2098,15 +2097,20 @@ async function sendMessage() {
   input.value = ''; input.style.height = 'auto';
   document.getElementById('suggested-replies').innerHTML = '';
 
-  // @coach mention — route to coach, don't send to AI
-  if (text.toLowerCase().startsWith('@coach')) {
-    addMsg('athlete-to-coach', text);
-    await sendToCoachTimeline(text);
-    return;
-  }
+  const athleteMsg = {
+    role: 'user',
+    sender: 'athlete',
+    content: text,
+    timestamp: new Date().toISOString(),
+    workoutContext: APP.currentWorkout?.name || null
+  };
 
   addMsg('athlete', text);
   APP.chatHistory.push({role:'user', content:text});
+  
+  // Save athlete message to shared timeline
+  await saveMessageToTimeline(athleteMsg);
+
   showTyping();
 
   const a = APP.currentWorkout;
@@ -2137,11 +2141,21 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     addMsg('ai', reply);
     APP.chatHistory.push({role:'assistant', content:reply});
     setSuggestedReplies([]);
+
+    // Save AI response to shared timeline so coach sees it
+    await saveMessageToTimeline({
+      role: 'assistant',
+      sender: 'ai',
+      content: reply,
+      timestamp: new Date().toISOString(),
+      workoutContext: APP.currentWorkout?.name || null
+    });
   } catch(e) {
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
   }
 }
+
 
 async function autoSaveWorkoutSummary(workout, firstAiResponse) {
   if (!APP.athlete) return;
@@ -2413,12 +2427,11 @@ function addMsg(role, text) {
   const container = document.getElementById('chat-messages');
   const el = document.createElement('div');
   const isAI = role === 'ai', isCoach = role === 'human-coach';
-  const isToCoach = role === 'athlete-to-coach', isToCoachSent = role === 'athlete-to-coach-sent';
-  el.className = `msg ${isAI ? 'ai' : isCoach ? 'human-coach' : isToCoach ? 'athlete-to-coach' : isToCoachSent ? 'athlete-to-coach-sent' : 'athlete'}`;
-  const avCls = isAI ? 'ai-av' : (isCoach) ? 'human-av' : 'athlete-av';
-  const avIcon = isAI ? '🤖' : isCoach ? '👨‍💼' : isToCoach || isToCoachSent ? '📨' : '🏃';
-  const senderCls = isAI ? 'ai-sender' : isCoach ? 'human-sender' : isToCoach ? 'human-sender' : 'athlete-sender';
-  const senderLabel = isAI ? 'AI Coach' : isCoach ? 'Coach Mike' : isToCoach ? '→ Coach' : isToCoachSent ? '' : 'You';
+  el.className = `msg ${isAI ? 'ai' : isCoach ? 'human-coach' : 'athlete'}`;
+  const avCls = isAI ? 'ai-av' : isCoach ? 'human-av' : 'athlete-av';
+  const avIcon = isAI ? '🤖' : isCoach ? '👨‍💼' : '🏃';
+  const senderCls = isAI ? 'ai-sender' : isCoach ? 'human-sender' : 'athlete-sender';
+  const senderLabel = isAI ? 'AI Coach' : isCoach ? 'Coach Mike' : 'You';
   el.innerHTML = `
     <div class="msg-avatar ${avCls}">${avIcon}</div>
     <div>

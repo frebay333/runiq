@@ -320,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.7</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.6.8</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -1896,117 +1896,86 @@ function renderMessaging() {
   if (!a) return;
   const nameEl = document.getElementById('msg-athlete-name');
   if (nameEl) nameEl.textContent = a.name;
-  // Load chat history from KV then render
-  loadChatHistoryFromKV(a.id).then(() => renderChatLog());
+  refreshChatTimeline();
   renderCoachNotesThread();
 }
 
-async function loadChatHistoryFromKV(athleteId) {
+// ── UNIFIED CHAT TIMELINE ─────────────────────────────────────
+let _chatRefreshInterval = null;
+
+async function refreshChatTimeline() {
+  const a = currentAthlete;
+  if (!a) return;
   try {
-    const res = await fetch(`/api/chat-history?athleteId=${athleteId}`);
+    const res = await fetch(`/api/chat-history?athleteId=${a.id}`);
     if (!res.ok) return;
     let data = await res.json();
+    // Handle double-encoded KV responses
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
     if (typeof data === 'string') { try { data = JSON.parse(data); } catch(e) { return; } }
-    if (data && data.messages) {
-      athleteChatHistory[athleteId] = data.messages;
+    if (data && Array.isArray(data.messages)) {
+      athleteChatHistory[a.id] = data.messages;
+      renderChatLog();
     }
   } catch(e) {}
+}
+
+function startChatAutoRefresh() {
+  stopChatAutoRefresh();
+  _chatRefreshInterval = setInterval(() => {
+    if (currentAthlete && document.getElementById('tab-chat')?.classList.contains('active')) {
+      refreshChatTimeline();
+    }
+  }, 15000);
+}
+
+function stopChatAutoRefresh() {
+  if (_chatRefreshInterval) { clearInterval(_chatRefreshInterval); _chatRefreshInterval = null; }
 }
 
 function renderChatLog() {
   const container = document.getElementById('chat-log');
   if (!container || !currentAthlete) return;
-  container.innerHTML = '';
+  const scrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
 
   const history = athleteChatHistory[currentAthlete.id] || [];
   if (!history.length) {
-    container.innerHTML = '<div style="text-align:center;padding:20px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--muted);">No chat history yet for this athlete.</div>';
+    container.innerHTML = '<div style="text-align:center;padding:40px 20px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);">No messages yet. Athlete chat will appear here in real time.</div>';
     return;
   }
 
+  container.innerHTML = '';
   history.forEach(msg => {
-    const el = document.createElement('div');
-    const isAI = msg.role === 'assistant' || msg.sender === 'ai';
     const isCoach = msg.sender === 'coach';
-    const isAthlete = msg.role === 'user' || msg.sender === 'athlete';
+    const isAI = msg.sender === 'ai' || msg.role === 'assistant';
+    const isAthlete = msg.sender === 'athlete' || (!isCoach && !isAI);
 
-    let avatarStyle, labelText, bubbleStyle;
-    if (isCoach) {
-      avatarStyle = 'background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);';
-      labelText = '👨‍💼 Coach';
-      bubbleStyle = 'background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);';
-    } else if (isAI) {
-      avatarStyle = 'background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.2);';
-      labelText = '🤖 AI Coach';
-      bubbleStyle = 'background:var(--s2);border:1px solid var(--border);';
-    } else {
-      avatarStyle = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);';
-      labelText = '🏃 ' + (currentAthlete.name?.split(' ')[0] || 'Athlete');
-      bubbleStyle = 'background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.15);';
-    }
+    const icon = isCoach ? '👨‍💼' : isAI ? '🤖' : '🏃';
+    const label = isCoach ? 'Coach' : isAI ? 'AI Coach' : (currentAthlete.name?.split(' ')[0] || 'Athlete');
+    const avatarBg = isCoach ? 'rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3)' 
+                   : isAI    ? 'rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.2)'
+                   :           'rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2)';
+    const bubbleBg = isCoach ? 'background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15)'
+                   : isAI    ? 'background:var(--s2);border:1px solid var(--border)'
+                   :           'background:rgba(16,185,129,.04);border:1px solid rgba(16,185,129,.15)';
+    const labelColor = isCoach ? 'var(--orange)' : isAI ? 'var(--ai-color)' : 'var(--green)';
+    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    const ctx = msg.workoutContext ? `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);padding:3px 8px;background:var(--s3);border-radius:4px;margin-bottom:4px;display:inline-block;">⚡ ${msg.workoutContext}</div>` : '';
 
+    const el = document.createElement('div');
     el.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
     el.innerHTML = `
-      <div style="width:30px;height:30px;border-radius:50%;${avatarStyle}display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">${isCoach?'👨‍💼':isAI?'🤖':'🏃'}</div>
+      <div style="width:28px;height:28px;border-radius:50%;background:${avatarBg};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">${icon}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">${labelText}${msg.timestamp?' · '+new Date(msg.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):''}</div>
-        ${msg.workoutCard ? `<div style="padding:8px 12px;background:var(--s3);border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--muted);margin-bottom:4px;">⚡ Analyzing: ${msg.workoutCard}</div>` : ''}
-        <div style="padding:10px 12px;${bubbleStyle}border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||msg.text||'').replace(/\n/g,'<br>')}</div>
-      </div>
-    `;
+        <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:${labelColor};margin-bottom:3px;">${label}${time ? ' · ' + time : ''}</div>
+        ${ctx}
+        <div style="padding:9px 12px;${bubbleBg};border-radius:8px;font-size:13px;line-height:1.6;color:var(--text);">${(msg.content||'').replace(/
+/g,'<br>')}</div>
+      </div>`;
     container.appendChild(el);
   });
-  container.scrollTop = container.scrollHeight;
-}
 
-function renderCoachNotesThread() {
-  const container = document.getElementById('coach-notes-thread');
-  if (!container || !currentAthlete) return;
-  const notes = athleteCoachNotes[currentAthlete.id] || [];
-  container.innerHTML = '';
-  if (!notes.length) {
-    container.innerHTML = '<div style="padding:12px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);">No coach notes yet.</div>';
-    return;
-  }
-  notes.forEach((n, i) => {
-    const el = document.createElement('div');
-    el.style.cssText = 'padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;';
-    el.innerHTML = `
-      <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;">${n.date ? new Date(n.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Note'} · Private</div>
-      <div style="font-size:13px;line-height:1.5;color:var(--text);">${n.note}</div>
-    `;
-    container.appendChild(el);
-  });
-}
-
-async function addCoachThreadNote() {
-  const input = document.getElementById('coach-note-input');
-  if (!input?.value.trim() || !currentAthlete) return;
-  if (!athleteCoachNotes[currentAthlete.id]) athleteCoachNotes[currentAthlete.id] = [];
-  const note = { note: input.value.trim(), date: new Date().toISOString(), author: 'coach' };
-  athleteCoachNotes[currentAthlete.id].push(note);
-  const savedText = input.value.trim();
-  input.value = '';
-  renderCoachNotesThread();
-  // Save to KV memory with error feedback
-  try {
-    const res = await fetch('/api/athlete-memory', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ athleteId: currentAthlete.id, action: 'add_note', data: note })
-    });
-    if (!res.ok) throw new Error('Save failed: ' + res.status);
-    // Refresh from KV to confirm
-    delete _memoryCache[currentAthlete?.id]; loadAthleteMemory(true);
-  } catch(e) {
-    console.error('Coach note save failed:', e);
-    // Show error inline
-    const container = document.getElementById('coach-notes-thread');
-    const errEl = document.createElement('div');
-    errEl.style.cssText = 'font-family:IBM Plex Mono,monospace;font-size:9px;color:#ef4444;padding:4px 8px;';
-    errEl.textContent = '⚠ Note saved locally but sync failed — check API connection';
-    container.appendChild(errEl);
-  }
+  if (scrolledToBottom) container.scrollTop = container.scrollHeight;
 }
 
 async function sendCoachDM() {
@@ -2015,26 +1984,20 @@ async function sendCoachDM() {
   const text = input.value.trim();
   input.value = '';
 
-  if (!athleteChatHistory[currentAthlete.id]) athleteChatHistory[currentAthlete.id] = [];
-  athleteChatHistory[currentAthlete.id].push({
-    role: 'user', sender: 'coach',
-    content: text,
-    timestamp: new Date().toISOString()
-  });
+  const msg = { role: 'user', sender: 'coach', content: text, timestamp: new Date().toISOString() };
 
-  // Save to KV so athlete sees it
+  // Optimistic update
+  if (!athleteChatHistory[currentAthlete.id]) athleteChatHistory[currentAthlete.id] = [];
+  athleteChatHistory[currentAthlete.id].push(msg);
+  renderChatLog();
+
+  // Save to KV
   try {
     await fetch('/api/chat-history', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        athleteId: currentAthlete.id,
-        action: 'append',
-        message: { role: 'user', sender: 'coach', content: text, timestamp: new Date().toISOString() }
-      })
+      body: JSON.stringify({ athleteId: currentAthlete.id, action: 'append', message: msg })
     });
-  } catch(e) {}
-
-  renderChatLog();
+  } catch(e) { console.error('Coach DM save failed:', e); }
 }
 
 // ── GOAL vs ESTIMATE ──────────────────
@@ -2092,15 +2055,8 @@ function switchTab(id, el) {
   document.getElementById('tab-' + id).classList.add('active');
   if (id === 'rx') loadRxTab();
   if (id === 'instructions') { renderInstructions(); loadGoalVsEstimate(); }
-  if (id === 'chat') {
-    // Always reload from KV so new athlete @coach messages appear
-    if (currentAthlete) {
-      loadChatHistoryFromKV(currentAthlete.id).then(() => {
-        renderChatLog();
-        renderCoachNotesThread();
-      });
-    }
-  }
+  if (id === 'chat') { renderMessaging(); startChatAutoRefresh(); }
+  else stopChatAutoRefresh();
 }
 
 </script>
