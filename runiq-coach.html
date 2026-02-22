@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.1</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.2</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -2049,14 +2049,12 @@ async function sendCoachAI() {
   const acts = a.activities || [];
   const recentRuns = acts.slice(0, 5).map(x => `${x.name} ${((x.distance||0)/1609.34).toFixed(1)}mi @ ${x.average_heartrate ? Math.round(x.average_heartrate)+'bpm' : 'no HR'}`).join(', ');
 
-  const systemPrompt = `You are an expert running coach assistant helping Coach review and coach their athlete.
+  const systemPrompt = `You are a running coach assistant. Be extremely brief — 1-2 sentences max. Matter-of-fact, no fluff.
 
-ATHLETE: ${a.name} — ${a.goal || 'Marathon'}
-RECENT RUNS: ${recentRuns || 'No recent data'}
-RECENT CHAT THREAD (last 10 messages):
-${thread || 'No messages yet'}
+ATHLETE: ${a.name} | GOAL: ${a.goal || 'Marathon'} | RECENT: ${recentRuns || 'no data'}
+THREAD: ${thread || 'none'}
 
-Give concise, actionable coaching advice. You can suggest what to say to the athlete, flag concerns, or analyze their training. Be direct — this is for the coach's eyes only.`;
+Respond like a busy coach glancing at notes. Flag concerns in one line. Suggest one action. Never write paragraphs.`;
 
   try {
     const res = await fetch('/api/claude', {

@@ -334,7 +334,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.1</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.7.2</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -380,7 +380,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.1</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.7.2</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -1512,15 +1512,26 @@ function renderSettingsPersonas() {
 function setPersona(id, silent) {
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
+  const prevPersona = APP.currentPersona;
   APP.currentPersona = id;
   renderSettingsPersonas();
   saveSettings();
-  if (!silent) {
+  if (!silent && id !== prevPersona) {
     document.getElementById('settings-dropdown').classList.remove('open');
-    APP.chatHistory = [];
-    document.getElementById('chat-messages').innerHTML = '';
     document.getElementById('suggested-replies').innerHTML = '';
-    document.getElementById('analyze-bar').style.display = 'flex';
+    // Don't clear chat - just add a system note
+    const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
+    const personas = KB ? KB.personas : {};
+    const newP = personas[id];
+    if (newP && document.getElementById('chat-messages')) {
+      const note = document.createElement('div');
+      note.style.cssText = 'text-align:center;padding:6px 12px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);border-top:1px solid var(--border);margin:8px 0;';
+      note.textContent = `— Switched to ${newP.icon || ''} ${newP.name} —`;
+      document.getElementById('chat-messages').appendChild(note);
+      document.getElementById('chat-messages').scrollTop = 999999;
+    }
+    // Reset AI history so new persona starts fresh context-wise
+    APP.chatHistory = [];
   }
 }
 
