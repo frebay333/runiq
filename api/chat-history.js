@@ -69,6 +69,18 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
       }
 
+      // Save full rolling timeline (single cohesive thread per athlete)
+      if (action === 'save_timeline') {
+        const timelineKey = `chat-timeline:${athleteId}`;
+        const payload = Array.isArray(messages)
+          ? { athleteId, messages, updatedAt: new Date().toISOString() }
+          : { athleteId, ...(messages || {}), updatedAt: new Date().toISOString() };
+        if (!Array.isArray(payload.messages) && Array.isArray(payload.history)) payload.messages = payload.history;
+        if (!Array.isArray(payload.messages)) payload.messages = [];
+        await kvSet(timelineKey, payload);
+        return res.status(200).json({ success: true });
+      }
+
       // Save full chat for a specific workout
       if (!workoutId) return res.status(400).json({ error: 'Missing workoutId' });
       const key = `chat:${athleteId}:${workoutId}`;

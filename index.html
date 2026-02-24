@@ -399,7 +399,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
             <option value="marathon">Marathon</option>
             <option value="ultra">Ultra</option>
           </select>
-          <input class="settings-input" id="s-goal-time" type="text" placeholder="Goal time (3:25:00)" oninput="debounceSaveSettings()" style="margin-bottom:0;">
+          <input class="settings-input" id="s-goal-time" type="text" placeholder="Goal time (3:25:00)" oninput="debounceSaveSettings()" onchange="saveSettings()" style="margin-bottom:0;">
         </div>
         <div id="s-countdown" style="font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--accent2);padding:4px 0;"></div>
         <div class="settings-divider"></div>
@@ -936,6 +936,7 @@ function finalizeApp() {
 
   // Load settings (persona, race goal, countdown)
   buildPersonaDropdown();
+  migrateLegacyWorkoutChats().catch(() => {});
 
   // Sync athlete data to KV (so coach can see it)
   syncAthleteToKV();
@@ -987,21 +988,116 @@ async function syncAthleteToKV() {
   }
 }
 
+function getThreadStorageKey() {
+  if (!APP.athlete || !APP.athlete.id) return null;
+  return `runiq_chat_thread_${APP.athlete.id}`;
+}
+
 async function saveChat(workoutId, messages) {
-  if (!APP.athlete || !workoutId) return;
+  if (!APP.athlete) return;
   try {
+    const body = workoutId
+      ? { athleteId: APP.athlete.id, workoutId, messages }
+      : { athleteId: APP.athlete.id, action: 'save_timeline', messages };
     await fetch('/api/chat-history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        athleteId: APP.athlete.id,
-        workoutId,
-        messages
-      })
+      body: JSON.stringify(body)
     });
   } catch(e) {
     console.warn('Chat save failed:', e);
   }
+}
+
+async function migrateLegacyWorkoutChats() {
+  if (!APP.athlete || !APP.athlete.id) return;
+  const athleteId = APP.athlete.id;
+  const unifiedKey = getThreadStorageKey();
+  if (!unifiedKey) return;
+  const markerKey = `runiq_chat_migrated_${athleteId}`;
+  if (localStorage.getItem(markerKey)) return;
+
+  const parsePayload = (raw) => {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch(e) { return null; }
+  };
+  const normalizeRole = (m) => (m?.role === 'assistant' ? 'assistant' : 'user');
+
+  const merged = [];
+  let tsSeed = Date.now() - 100000;
+
+  const existingUnified = parsePayload(localStorage.getItem(unifiedKey));
+  if (existingUnified && Array.isArray(existingUnified.history)) {
+    existingUnified.history.forEach((m, i) => {
+      if (!m || !m.content) return;
+      merged.push({
+        role: normalizeRole(m),
+        content: m.content,
+        workoutId: m.workoutId || null,
+        _ts: Number(m.timestamp || existingUnified.ts || tsSeed) + i
+      });
+    });
+  }
+
+  const legacyKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    if (/^runiq_chat_\d+$/.test(k) || /^chat_\d+$/.test(k)) legacyKeys.push(k);
+  }
+
+  legacyKeys.forEach((k) => {
+    const payload = parsePayload(localStorage.getItem(k));
+    if (!payload || !Array.isArray(payload.history)) return;
+    const match = k.match(/(\d+)$/);
+    const workoutId = match ? match[1] : null;
+    const baseTs = Number(payload.ts || tsSeed);
+    payload.history.forEach((m, idx) => {
+      if (!m || !m.content) return;
+      merged.push({
+        role: normalizeRole(m),
+        content: m.content,
+        workoutId,
+        _ts: baseTs + idx
+      });
+    });
+    tsSeed += 1000;
+  });
+
+  if (!merged.length) {
+    localStorage.setItem(markerKey, '1');
+    return;
+  }
+
+  merged.sort((a, b) => a._ts - b._ts);
+  const deduped = [];
+  const seen = new Set();
+  merged.forEach((m) => {
+    const sig = `${m.role}|${m.content}|${m.workoutId || ''}`;
+    if (seen.has(sig)) return;
+    seen.add(sig);
+    deduped.push(m);
+  });
+
+  const unifiedHistory = deduped.map(m => ({ role: m.role, content: m.content, workoutId: m.workoutId || null, timestamp: new Date(m._ts).toISOString() }));
+  localStorage.setItem(unifiedKey, JSON.stringify({ history: unifiedHistory, ts: Date.now() }));
+  localStorage.setItem(markerKey, '1');
+
+  // Seed KV timeline once if it doesn't already exist.
+  try {
+    const res = await fetch(`/api/chat-history?athleteId=${athleteId}`);
+    const data = res.ok ? await res.json() : null;
+    if (!data || !Array.isArray(data.messages) || !data.messages.length) {
+      const timelineMessages = unifiedHistory.map(m => ({
+        role: m.role,
+        sender: m.role === 'assistant' ? 'ai' : 'athlete',
+        content: m.content,
+        timestamp: m.timestamp,
+        workoutId: m.workoutId || null
+      }));
+      await saveChat(null, { messages: timelineMessages, migratedAt: new Date().toISOString() });
+    }
+  } catch(e) {}
 }
 
 function getWorkoutContextLabel() {
@@ -1470,7 +1566,7 @@ function renderMonthlyPlan() {
 // Build persona dropdown from KB
 function buildPersonaDropdown() {
   // Now handled by settings dropdown
-  loadSettings();
+  loadSettings().catch(() => {});
   updateNavCountdown();
 }
 
@@ -1487,16 +1583,41 @@ document.addEventListener('click', e => {
   }
 });
 
-function loadSettings() {
+async function loadSettings() {
   const saved = localStorage.getItem('runiq_settings');
   if (saved) {
-    const s = JSON.parse(saved);
-    if (s.raceName) document.getElementById('s-race-name').value = s.raceName;
-    if (s.raceDate) document.getElementById('s-race-date').value = s.raceDate;
-    if (s.raceDist) document.getElementById('s-race-dist').value = s.raceDist;
-    if (s.goalTime) { const el = document.getElementById('s-goal-time'); if (el) el.value = s.goalTime; }
-    if (s.persona) APP.currentPersona = s.persona;
-    updateCountdown(s.raceDate);
+    try {
+      const s = JSON.parse(saved);
+      if (s.raceName) document.getElementById('s-race-name').value = s.raceName;
+      if (s.raceDate) document.getElementById('s-race-date').value = s.raceDate;
+      if (s.raceDist) document.getElementById('s-race-dist').value = s.raceDist;
+      if (s.goalTime) { const el = document.getElementById('s-goal-time'); if (el) el.value = s.goalTime; }
+      if (s.persona) APP.currentPersona = s.persona;
+      updateCountdown(s.raceDate);
+    } catch(e) {}
+  }
+
+  // Backfill from athlete memory if local settings are missing/empty.
+  if (APP.athlete && APP.athlete.id) {
+    const raceNameEl = document.getElementById('s-race-name');
+    const raceDateEl = document.getElementById('s-race-date');
+    const raceDistEl = document.getElementById('s-race-dist');
+    const goalTimeEl = document.getElementById('s-goal-time');
+    const hasLocalGoal = !!(raceNameEl?.value || raceDateEl?.value || raceDistEl?.value || goalTimeEl?.value);
+    if (!hasLocalGoal) {
+      try {
+        const res = await fetch(`/api/athlete-memory?athleteId=${APP.athlete.id}`);
+        if (res.ok) {
+          const mem = await res.json();
+          if (mem?.targetRace && raceNameEl) raceNameEl.value = mem.targetRace;
+          if (mem?.targetDate && raceDateEl) raceDateEl.value = mem.targetDate;
+          if (mem?.raceDist && raceDistEl) raceDistEl.value = mem.raceDist;
+          if (mem?.goalTime && goalTimeEl) goalTimeEl.value = mem.goalTime;
+          if (mem?.targetDate) updateCountdown(mem.targetDate);
+          if (mem && (mem.targetRace || mem.targetDate || mem.raceDist || mem.goalTime)) saveSettings();
+        }
+      } catch(e) {}
+    }
   }
   renderSettingsPersonas();
 }
@@ -1517,7 +1638,7 @@ function saveSettings() {
   };
   localStorage.setItem('runiq_settings', JSON.stringify(s));
   // Also save to athlete memory for AI injection
-  if (APP.athlete && s.raceName) {
+  if (APP.athlete && (s.raceName || s.raceDate || s.raceDist || s.goalTime)) {
     fetch('/api/athlete-memory', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1640,8 +1761,8 @@ async function selectWorkout(activity, el) {
   if (APP._chatRunning) return;
   const selectSeq = ++APP._workoutSelectSeq;
   document.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
-  el.classList.add('selected');
-  const isFirstLoad = !APP.currentWorkout || !APP.chatInitialized;
+  if (el) el.classList.add('selected');
+  const previousWorkoutId = APP.currentWorkout ? APP.currentWorkout.id : null;
 
   // Fetch detailed activity to get laps (list endpoint doesn't include them)
   let detailed = activity;
@@ -1681,16 +1802,18 @@ async function selectWorkout(activity, el) {
     if (existing) existing.remove();
   }
   document.getElementById('ping-btn').className = 'ping-btn';
-  document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
-  APP.chatHistory = [];
-  APP.chatInitialized = true;
-  // Restore saved conversation for this workout (KV -> localStorage)
-  await loadChatHistory(detailed.id, selectSeq);
+  if (!APP.chatInitialized) {
+    APP.chatHistory = [];
+    await loadChatHistory(null, selectSeq);
+    APP.chatInitialized = true;
+  } else if (previousWorkoutId !== detailed.id) {
+    addWorkoutSeparator(detailed);
+  }
   if (selectSeq !== APP._workoutSelectSeq || !APP.currentWorkout || APP.currentWorkout.id !== detailed.id) return;
-  addWorkoutSeparator(detailed);
   document.getElementById('analyze-bar').style.display = 'flex';
   updateAnalyzeButton();
+  if (APP_RX) renderRxSidebar(APP_RX);
   renderWeeklySummary();
 }
 
@@ -1978,18 +2101,7 @@ async function analyzeWorkout(options = {}) {
   APP._analyzed = true;
   APP.analyzedWorkouts[APP.currentWorkout.id] = true;
   updateAnalyzeButton();
-  // Load previous chat history for this workout if available
-  const savedKey = `runiq_chat_${APP.currentWorkout.id}`;
-  const saved = localStorage.getItem(savedKey);
-  const hasChat = !!document.getElementById('chat-messages')?.innerHTML?.trim() || APP.chatHistory.length;
-  if (saved && !hasChat) {
-    const parsed = JSON.parse(saved);
-    document.getElementById('chat-messages').innerHTML = parsed.html || '';
-    APP.chatHistory = parsed.history || [];
-    document.getElementById('suggested-replies').innerHTML = '';
-    APP._chatRunning = false;
-    return;
-  }
+  if (APP_RX) renderRxSidebar(APP_RX);
   document.getElementById('suggested-replies').innerHTML = '';
   if (skipInitialAnalysis) {
     APP._chatRunning = false;
@@ -2099,6 +2211,8 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     addMsg('ai', text);
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
     APP.chatHistory.push({role:'assistant', content:text});
+    appendTimelineMessage('athlete', 'Analyze my workout.');
+    appendTimelineMessage('ai', text);
     setSuggestedReplies(getSuggestions());
     persistChat();
     // Auto-save workout summary to athlete memory
@@ -2112,6 +2226,11 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     }
     hideTyping();
     addMsg('ai', `Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`);
+    APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
+    APP.chatHistory.push({role:'assistant', content:`Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`});
+    appendTimelineMessage('athlete', 'Analyze my workout.');
+    appendTimelineMessage('ai', `Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`);
+    persistChat();
     APP._chatRunning = false;
   }
 
@@ -2283,6 +2402,18 @@ function toggleRxPanel() {
   arrow.textContent = isOpen ? '▼' : '▲';
 }
 
+function findMatchedWorkoutForRxDay(dayKey) {
+  const day = APP_RX?.days?.[dayKey];
+  if (!day) return null;
+  if (day.activityId) {
+    const exact = APP.activities.find(a => String(a.id) === String(day.activityId));
+    if (exact) return exact;
+  }
+  const dayIdx = ['sun','mon','tue','wed','thu','fri','sat'].indexOf(dayKey);
+  const matches = APP.activities.filter(a => new Date(a.start_date).getDay() === dayIdx);
+  return matches.length ? matches[0] : null;
+}
+
 function renderRxSidebar(rx) {
   if (!rx || !rx.days) return;
 
@@ -2342,9 +2473,11 @@ function renderRxSidebar(rx) {
       ? `<span class="rx-grade ${day.letter || gradeToLetter(day.grade)}">${day.letter || gradeToLetter(day.grade)}</span>`
       : `<span class="rx-row-status ${statusClass}">${statusLabel}</span>`;
 
+    const matchedWorkout = findMatchedWorkoutForRxDay(dayKey);
+    const analyzeLabel = matchedWorkout && APP.analyzedWorkouts[matchedWorkout.id] ? 'RE-ANALYZE' : 'ANALYZE';
     const btnHtml = !isRest && rx.status === 'pushed' ? `
       ${isCompleted
-        ? `<button class="rx-btn analyze" onclick="rxAnalyze('${dayKey}')">⚡ Analyze</button>`
+        ? `<button class="rx-btn analyze" onclick="rxAnalyze('${dayKey}')">⚡ ${analyzeLabel}</button>`
         : `<button class="rx-btn discuss" onclick="rxDiscuss('${dayKey}')">💬 Discuss</button>`
       }` : '';
 
@@ -2393,19 +2526,18 @@ function startRxPolling() {
   });
 }
 
-function rxAnalyze(dayKey) {
+async function rxAnalyze(dayKey) {
   // Switch to coach tab and trigger analyze for matching workout
   showPage('coach', document.querySelector('[onclick*="coach"]'));
-  const day = APP_RX?.days?.[dayKey];
-  if (!day) return;
-  // Find the most recent workout matching this day
-  const dayIdx = ['sun','mon','tue','wed','thu','fri','sat'].indexOf(dayKey);
-  const match = APP.activities.find(a => new Date(a.start_date).getDay() === dayIdx);
+  const match = findMatchedWorkoutForRxDay(dayKey);
   if (match) {
     const el = document.querySelector(`.history-item[data-id="${match.id}"]`);
-    if (el) el.click();
-    else analyzeWorkout();
+    if (el) await selectWorkout(match, el);
+    else APP.currentWorkout = match;
+    await analyzeWorkout();
+    return;
   }
+  await analyzeWorkout();
 }
 
 function rxDiscuss(dayKey) {
@@ -2483,8 +2615,8 @@ function getChatPayload() {
 }
 
 function saveChatHistory() {
-  if (!APP.currentWorkout) return;
-  const key = `runiq_chat_${APP.currentWorkout.id}`;
+  const key = getThreadStorageKey();
+  if (!key) return;
   const data = getChatPayload();
   try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
 }
@@ -2492,19 +2624,39 @@ function saveChatHistory() {
 function renderChatFromHistory(history) {
   const container = document.getElementById('chat-messages');
   container.innerHTML = '';
+  const normalizedHistory = [];
   (history || []).forEach(m => {
-    const role = m.role === 'assistant' ? 'ai' : 'athlete';
+    const sender = m.sender || (m.role === 'assistant' ? 'ai' : m.role === 'coach' ? 'human-coach' : 'athlete');
+    const role = sender === 'ai' ? 'ai' : sender === 'coach' || sender === 'human-coach' ? 'human-coach' : 'athlete';
     addMsg(role, m.content || '');
+    if (m.role === 'assistant' || m.role === 'user') normalizedHistory.push({ role: m.role, content: m.content || '' });
   });
-  APP.chatHistory = history || [];
+  APP.chatHistory = normalizedHistory;
   container.scrollTop = 999999;
 }
 
-async function loadChatHistory(workoutId, selectSeq = null) {
-  if (!workoutId) return false;
+function rebuildAnalyzedWorkouts(history) {
+  const list = Array.isArray(history)
+    ? history
+    : Array.isArray(history?.messages)
+      ? history.messages
+      : Array.isArray(history?.history)
+        ? history.history
+        : [];
+  APP.analyzedWorkouts = {};
+  list.forEach(msg => {
+    if (!msg || msg.role !== 'user' || !msg.workoutId) return;
+    if ((msg.content || '').trim().toLowerCase() === 'analyze my workout.') {
+      APP.analyzedWorkouts[msg.workoutId] = true;
+    }
+  });
+}
+
+async function loadChatHistory(workoutId = null, selectSeq = null) {
   const container = document.getElementById('chat-messages');
   const isStaleSelection = () => {
-    if (!APP.currentWorkout || APP.currentWorkout.id !== workoutId) return true;
+    if (!APP.currentWorkout) return true;
+    if (workoutId && APP.currentWorkout.id !== workoutId) return true;
     if (selectSeq === null) return false;
     return selectSeq !== APP._workoutSelectSeq;
   };
@@ -2533,43 +2685,50 @@ async function loadChatHistory(workoutId, selectSeq = null) {
     }
     return false;
   };
-  // Try KV first
+  // Try KV first (unified athlete timeline)
   if (APP.athlete && APP.athlete.id) {
     try {
-      const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}&workoutId=${workoutId}`);
+      const url = workoutId
+        ? `/api/chat-history?athleteId=${APP.athlete.id}&workoutId=${workoutId}`
+        : `/api/chat-history?athleteId=${APP.athlete.id}`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (isStaleSelection()) return false;
         const payload = data && (data.messages !== undefined ? data.messages : data);
-        if (applyHistoryPayload(payload)) return true;
+        if (applyHistoryPayload(payload)) {
+          rebuildAnalyzedWorkouts(payload);
+          return true;
+        }
       }
     } catch(e) {}
   }
-  // Fall back to localStorage
-  const key = `runiq_chat_${workoutId}`;
-  const legacyKey = `chat_${workoutId}`;
+  // Fall back to localStorage (unified key first, legacy per-workout key as backup)
+  const key = getThreadStorageKey();
+  const legacyKey = workoutId ? `runiq_chat_${workoutId}` : null;
   try {
-    const data = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey));
-    if (applyHistoryPayload(data)) return true;
+    const data = JSON.parse((key ? localStorage.getItem(key) : null) || (legacyKey ? localStorage.getItem(legacyKey) : null));
+    if (applyHistoryPayload(data)) {
+      rebuildAnalyzedWorkouts(data);
+      return true;
+    }
   } catch(e) {}
   return false;
 }
 
 function saveChatToStorage() {
-  if (!APP.currentWorkout) return;
-  const key = `runiq_chat_${APP.currentWorkout.id}`;
+  const key = getThreadStorageKey();
+  if (!key) return;
   const payload = getChatPayload();
   localStorage.setItem(key, JSON.stringify(payload));
 }
 
 async function persistChat() {
-  if (!APP.currentWorkout) return;
   const payload = getChatPayload();
+  const key = getThreadStorageKey();
   try {
-    const key = `runiq_chat_${APP.currentWorkout.id}`;
-    localStorage.setItem(key, JSON.stringify(payload));
+    if (key) localStorage.setItem(key, JSON.stringify(payload));
   } catch(e) {}
-  saveChat(APP.currentWorkout.id, payload);
 }
 
 function addMsg(role, text) {
