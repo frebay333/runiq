@@ -1,4 +1,4 @@
-// api/claude.js
+// api/claude.js — v0.6.9.3
 // Proxies requests to Anthropic API — auto-injects athlete memory into every system prompt
 
 export default async function handler(req, res) {
@@ -17,28 +17,64 @@ export default async function handler(req, res) {
     } catch { return null; }
   }
 
-  function buildMemoryBlock(mem) {
+  function buildMemoryBlock(mem, cutoffMs) {
     if (!mem || mem.empty) return '';
     const lines = [];
-    if (mem.goal) lines.push(`ATHLETE GOAL: ${mem.goal}`);
-    if (mem.targetRace) lines.push(`TARGET RACE: ${mem.targetRace}${mem.targetDate ? ' on ' + mem.targetDate : ''}`);
-    if (mem.athletePreferences) lines.push(`ATHLETE NOTES: ${mem.athletePreferences}`);
-    if (mem.injuryHistory && mem.injuryHistory.length)
-      lines.push(`INJURY HISTORY: ${mem.injuryHistory.join(', ')}`);
+    const withinCutoff = item => {
+      if (!cutoffMs) return true;
+      const t = item && item.date ? new Date(item.date).getTime() : NaN;
+      return Number.isFinite(t) ? t <= cutoffMs : true;
+    };
+    const fieldUpdatedMs = key => {
+      const d = mem.fieldUpdated && mem.fieldUpdated[key] ? new Date(mem.fieldUpdated[key]).getTime() : NaN;
+      return Number.isFinite(d) ? d : null;
+    };
+    const includeUndated = key => {
+      if (!cutoffMs) return true;
+      const t = fieldUpdatedMs(key);
+      if (t !== null) return t <= cutoffMs;
+      const lu = mem.lastUpdated ? new Date(mem.lastUpdated).getTime() : NaN;
+      return Number.isFinite(lu) ? lu <= cutoffMs : false;
+    };
+    if (mem.goal && includeUndated('goal')) lines.push(`ATHLETE GOAL: ${mem.goal}`);
+    if (mem.targetRace && includeUndated('targetRace')) lines.push(`TARGET RACE: ${mem.targetRace}${mem.targetDate ? ' on ' + mem.targetDate : ''}`);
+    if (mem.athletePreferences && includeUndated('athletePreferences')) lines.push(`ATHLETE NOTES: ${mem.athletePreferences}`);
+    if (mem.injuryHistory && mem.injuryHistory.length) {
+      let injuries = mem.injuryHistory;
+      if (cutoffMs) {
+        if (Array.isArray(mem.injuryHistoryMeta) && mem.injuryHistoryMeta.length) {
+          injuries = mem.injuryHistoryMeta
+            .filter(withinCutoff)
+            .map(x => x.injury)
+            .filter(Boolean);
+        } else if (!includeUndated('injuryHistory')) {
+          injuries = [];
+        }
+      }
+      if (injuries.length) lines.push(`INJURY HISTORY: ${injuries.join(', ')}`);
+    }
     if (mem.coachNotes && mem.coachNotes.length) {
-      lines.push('RECENT COACH NOTES:');
-      mem.coachNotes.slice(-5).forEach(n => {
-        const d = new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        lines.push(`  [${d}] ${n.note}`);
-      });
+      const notes = mem.coachNotes.filter(withinCutoff).slice(-5);
+      if (notes.length) {
+        lines.push('RECENT COACH NOTES:');
+        notes.forEach(n => {
+          const d = new Date(n.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          lines.push(`  [${d}] ${n.note}`);
+        });
+      }
     }
     if (mem.workoutSummaries && mem.workoutSummaries.length) {
-      lines.push('RECENT WORKOUT HISTORY:');
-      mem.workoutSummaries.slice(-5).forEach(s => {
-        const d = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        lines.push(`  [${d}] ${s.workoutName}: ${s.summary}`);
-      });
+      const summaries = mem.workoutSummaries.filter(withinCutoff).slice(-5);
+      if (summaries.length) {
+        lines.push('RECENT WORKOUT HISTORY:');
+        summaries.forEach(s => {
+          const d = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          lines.push(`  [${d}] ${s.workoutName}: ${s.summary}`);
+        });
+      }
     }
+    if (mem.raceEstimates && includeUndated('raceEstimates'))
+      lines.push(`RACE ESTIMATES: ${JSON.stringify(mem.raceEstimates)}`);
     if (!lines.length) return '';
     return `\n\n=== ATHLETE MEMORY ===\n${lines.join('\n')}\n=== END MEMORY ===`;
   }
@@ -46,13 +82,16 @@ export default async function handler(req, res) {
   try {
     const body = { ...req.body };
     const athleteId = body.athleteId;
+    const contextDate = body.contextDate;
     delete body.athleteId;
+    delete body.contextDate;
 
     if (athleteId && KV_URL && KV_TOKEN) {
       const raw = await kvGet(`memory:${athleteId}`);
       if (raw) {
         const mem = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        const memBlock = buildMemoryBlock(mem);
+        const cutoffMs = contextDate ? new Date(contextDate).getTime() : null;
+        const memBlock = buildMemoryBlock(mem, Number.isFinite(cutoffMs) ? cutoffMs : null);
         if (memBlock && body.system) body.system = body.system + memBlock;
       }
     }

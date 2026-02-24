@@ -1,4 +1,4 @@
-// api/athlete-memory.js — v0.6.9.2
+// api/athlete-memory.js — v0.6.9.3
 // Stores and retrieves long-term coaching memory per athlete
 
 export default async function handler(req, res) {
@@ -56,9 +56,11 @@ export default async function handler(req, res) {
     raceDist: '',
     raceEstimates: null,
     injuryHistory: [],
+    injuryHistoryMeta: [],
     coachNotes: [],
     workoutSummaries: [],
     athletePreferences: '',
+    fieldUpdated: {},
     lastUpdated: new Date().toISOString()
   });
 
@@ -77,6 +79,9 @@ export default async function handler(req, res) {
       if (!Array.isArray(mem.coachNotes)) mem.coachNotes = [];
       if (!Array.isArray(mem.workoutSummaries)) mem.workoutSummaries = [];
       if (!Array.isArray(mem.injuryHistory)) mem.injuryHistory = [];
+      if (!Array.isArray(mem.injuryHistoryMeta)) mem.injuryHistoryMeta = [];
+      if (!mem.fieldUpdated || typeof mem.fieldUpdated !== 'object') mem.fieldUpdated = {};
+      const nowIso = new Date().toISOString();
 
       if (action === 'set_goal') {
         if (data.goal !== undefined) mem.goal = data.goal;
@@ -85,11 +90,18 @@ export default async function handler(req, res) {
         if (data.goalTime !== undefined) mem.goalTime = data.goalTime;
         if (data.raceDist !== undefined) mem.raceDist = data.raceDist;
         if (data.athletePreferences !== undefined) mem.athletePreferences = data.athletePreferences;
+        if (data.goal !== undefined) mem.fieldUpdated.goal = nowIso;
+        if (data.targetRace !== undefined) mem.fieldUpdated.targetRace = nowIso;
+        if (data.targetDate !== undefined) mem.fieldUpdated.targetDate = nowIso;
+        if (data.goalTime !== undefined) mem.fieldUpdated.goalTime = nowIso;
+        if (data.raceDist !== undefined) mem.fieldUpdated.raceDist = nowIso;
+        if (data.athletePreferences !== undefined) mem.fieldUpdated.athletePreferences = nowIso;
       }
       else if (action === 'add_note') {
         // Support key/value fields (e.g. marathonEstimate)
         if (data.key && data.value !== undefined) {
           mem[data.key] = data.value;
+          mem.fieldUpdated[data.key] = nowIso;
         } else {
           mem.coachNotes.push({
             date: new Date().toISOString(),
@@ -105,10 +117,14 @@ export default async function handler(req, res) {
       else if (action === 'add_injury') {
         if (data.injury && !mem.injuryHistory.includes(data.injury)) {
           mem.injuryHistory.push(data.injury);
+          mem.injuryHistoryMeta.push({ injury: data.injury, date: nowIso });
+          mem.fieldUpdated.injuryHistory = nowIso;
         }
       }
       else if (action === 'remove_injury') {
         mem.injuryHistory = mem.injuryHistory.filter(x => x !== data.injury);
+        mem.injuryHistoryMeta = mem.injuryHistoryMeta.filter(x => x.injury !== data.injury);
+        mem.fieldUpdated.injuryHistory = nowIso;
       }
       else if (action === 'add_workout_summary') {
         mem.workoutSummaries.push({
@@ -121,6 +137,7 @@ export default async function handler(req, res) {
       }
       else if (action === 'full_update') {
         Object.assign(mem, data);
+        Object.keys(data || {}).forEach(k => { mem.fieldUpdated[k] = nowIso; });
       }
       else {
         return res.status(400).json({ error: 'Unknown action: ' + action });

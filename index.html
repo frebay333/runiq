@@ -331,7 +331,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.4</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.5</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -377,7 +377,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.4</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.5</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -1678,14 +1678,12 @@ async function selectWorkout(activity, el) {
     if (existing) existing.remove();
   }
   document.getElementById('ping-btn').className = 'ping-btn';
-  if (!APP.chatInitialized) {
-    document.getElementById('chat-messages').innerHTML = '';
-    document.getElementById('suggested-replies').innerHTML = '';
-    APP.chatHistory = [];
-    APP.chatInitialized = true;
-    // Try to restore saved conversation on first load only
-    loadChatHistory(detailed.id);
-  }
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('suggested-replies').innerHTML = '';
+  APP.chatHistory = [];
+  APP.chatInitialized = true;
+  // Restore saved conversation for this workout (KV -> localStorage)
+  await loadChatHistory(detailed.id);
   addWorkoutSeparator(detailed);
   document.getElementById('analyze-bar').style.display = 'flex';
   updateAnalyzeButton();
@@ -1976,7 +1974,7 @@ async function analyzeWorkout(options = {}) {
   APP.analyzedWorkouts[APP.currentWorkout.id] = true;
   updateAnalyzeButton();
   // Load previous chat history for this workout if available
-  const savedKey = `chat_${APP.currentWorkout.id}`;
+  const savedKey = `runiq_chat_${APP.currentWorkout.id}`;
   const saved = localStorage.getItem(savedKey);
   const hasChat = !!document.getElementById('chat-messages')?.innerHTML?.trim() || APP.chatHistory.length;
   if (saved && !hasChat) {
@@ -2082,7 +2080,8 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
         max_tokens:1000,
         system: systemPrompt,
         messages:[{role:'user', content:'Analyze my workout.'}],
-        athleteId: APP.athlete ? APP.athlete.id : null
+        athleteId: APP.athlete ? APP.athlete.id : null,
+        contextDate: a?.start_date || new Date().toISOString()
       })
     });
     const data = await res.json();
@@ -2092,6 +2091,7 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
     APP.chatHistory.push({role:'assistant', content:text});
     setSuggestedReplies(getSuggestions());
+    persistChat();
     // Auto-save workout summary to athlete memory
     if (APP.athlete && APP.currentWorkout) {
       autoSaveWorkoutSummary(APP.currentWorkout, text);
@@ -2132,6 +2132,7 @@ async function sendMessage() {
   addMsg('athlete', text);
   APP.chatHistory.push({role:'user', content:text});
   appendTimelineMessage('athlete', text);
+  persistChat();
   showTyping();
 
   const a = APP.currentWorkout;
@@ -2153,7 +2154,8 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system: systemPrompt,
         messages: APP.chatHistory,
-        athleteId: APP.athlete ? APP.athlete.id : null
+        athleteId: APP.athlete ? APP.athlete.id : null,
+        contextDate: a?.start_date || new Date().toISOString()
       })
     });
     const data = await res.json();
@@ -2163,6 +2165,7 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     APP.chatHistory.push({role:'assistant', content:reply});
     appendTimelineMessage('ai', reply);
     setSuggestedReplies([]);
+    persistChat();
   } catch(e) {
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
@@ -2423,27 +2426,67 @@ function pingCoach() {
   btn.textContent = '✓ Pinged';
   addMsg('human-coach', `Coach Mike has been notified and will review this workout. Expected response within 24 hours.`);
   // In production this would trigger a notification to the coach portal
+  persistChat();
+}
+
+function getChatPayload() {
+  return {
+    html: document.getElementById('chat-messages').innerHTML,
+    history: APP.chatHistory,
+    ts: Date.now()
+  };
 }
 
 function saveChatHistory() {
   if (!APP.currentWorkout) return;
   const key = `runiq_chat_${APP.currentWorkout.id}`;
-  const data = {
-    messages: document.getElementById('chat-messages').innerHTML,
-    history: APP.chatHistory,
-    ts: Date.now()
-  };
+  const data = getChatPayload();
   try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
 }
 
-function loadChatHistory(workoutId) {
+function renderChatFromHistory(history) {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = '';
+  (history || []).forEach(m => {
+    const role = m.role === 'assistant' ? 'ai' : 'athlete';
+    addMsg(role, m.content || '');
+  });
+  APP.chatHistory = history || [];
+  container.scrollTop = 999999;
+}
+
+async function loadChatHistory(workoutId) {
+  if (!workoutId) return false;
+  const container = document.getElementById('chat-messages');
+  // Try KV first
+  if (APP.athlete && APP.athlete.id) {
+    try {
+      const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}&workoutId=${workoutId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const payload = data && data.messages;
+        if (payload && payload.html) {
+          container.innerHTML = payload.html || '';
+          APP.chatHistory = payload.history || [];
+          container.scrollTop = 999999;
+          return true;
+        }
+        if (Array.isArray(payload)) {
+          renderChatFromHistory(payload);
+          return true;
+        }
+      }
+    } catch(e) {}
+  }
+  // Fall back to localStorage
   const key = `runiq_chat_${workoutId}`;
+  const legacyKey = `chat_${workoutId}`;
   try {
-    const data = JSON.parse(localStorage.getItem(key));
-    if (data && data.messages) {
-      document.getElementById('chat-messages').innerHTML = data.messages;
+    const data = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey));
+    if (data && (data.html || data.messages)) {
+      container.innerHTML = data.html || data.messages || '';
       APP.chatHistory = data.history || [];
-      document.getElementById('chat-messages').scrollTop = 999999;
+      container.scrollTop = 999999;
       return true;
     }
   } catch(e) {}
@@ -2452,11 +2495,19 @@ function loadChatHistory(workoutId) {
 
 function saveChatToStorage() {
   if (!APP.currentWorkout) return;
-  const key = `chat_${APP.currentWorkout.id}`;
-  localStorage.setItem(key, JSON.stringify({
-    html: document.getElementById('chat-messages').innerHTML,
-    history: APP.chatHistory
-  }));
+  const key = `runiq_chat_${APP.currentWorkout.id}`;
+  const payload = getChatPayload();
+  localStorage.setItem(key, JSON.stringify(payload));
+}
+
+async function persistChat() {
+  if (!APP.currentWorkout) return;
+  const payload = getChatPayload();
+  try {
+    const key = `runiq_chat_${APP.currentWorkout.id}`;
+    localStorage.setItem(key, JSON.stringify(payload));
+  } catch(e) {}
+  saveChat(APP.currentWorkout.id, payload);
 }
 
 function addMsg(role, text) {
