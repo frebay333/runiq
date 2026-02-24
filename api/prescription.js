@@ -1,4 +1,4 @@
-// api/prescription.js — v0.6.9.1.1
+// api/prescription.js — v0.6.9.2
 // Stores and retrieves weekly prescribed workouts per athlete
 // KV key: prescription:{athleteId}:{weekStart}  (weekStart = YYYY-MM-DD Monday)
 
@@ -6,6 +6,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const KV_URL = process.env.UPSTASH_REDIS_REST_URL;

@@ -331,7 +331,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="login-header">
       <div class="login-logo">RunIQ</div>
       <div class="login-sub">Race · Plan · Coach</div>
-      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.0</div>
+      <div style="font-family:IBM Plex Mono,monospace;font-size:10px;color:#444;letter-spacing:2px;">v0.6.4</div>
     </div>
     <div class="login-panels">
       <!-- Athlete Panel -->
@@ -377,7 +377,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="nav-tab" onclick="showPage('plan',this)"><span class="tab-num">02</span> Training Plan</div>
     <div class="nav-tab" onclick="showPage('coach',this)"><span class="tab-num">03</span> AI Coach</div>
   </div>
-  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.0</div>
+  <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted2);letter-spacing:1px;margin-left:12px;">v0.6.4</div>
   <div class="nav-right">
     <a class="nav-coach-link" href="runiq-coach.html?auth=coach123" target="_blank">⚡ Coach Portal</a>
     <div class="settings-wrap" id="settings-wrap">
@@ -946,6 +946,7 @@ function finalizeApp() {
 
   // Load prescribed workouts for the week
   loadPrescribedWeek(); // loads for real users, shows placeholder for demo
+  startRxPolling();
 
   // Show baseline banner on plan page
   updateBaselineBanner();
@@ -1108,19 +1109,20 @@ function updateEstimates() {
 
   drawVolChart(weeks);
 
-  // Save marathon estimate to athlete memory so coach portal can read it
-  if (APP.athlete && APP.athlete.id && APP.athlete.id !== 1 && tm) {
-    const h = Math.floor(tm/3600);
-    const mn = Math.floor((tm%3600)/60);
-    const sc = Math.round(tm%60);
-    const estStr = h + ':' + String(mn).padStart(2,'0') + ':' + String(sc).padStart(2,'0');
+  // Save race estimator outputs so coach portal uses athlete-side estimator data
+  if (APP.athlete && APP.athlete.id && APP.athlete.id !== 1 && t10k && thm && tm) {
+    const raceEstimates = {
+      t10k: fmtTime(t10k),
+      thm: fmtTime(thm),
+      tm: fmtTime(tm)
+    };
     fetch('/api/athlete-memory', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         athleteId: APP.athlete.id,
         action: 'add_note',
-        data: { key: 'marathonEstimate', value: estStr }
+        data: { key: 'raceEstimates', value: raceEstimates }
       })
     }).catch(() => {});
   }
@@ -1486,7 +1488,7 @@ function saveSettings() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         athleteId: APP.athlete.id, action: 'set_goal',
-        data: { goal: `${s.raceDist || 'marathon'} — ${s.raceName}`, targetRace: s.raceName, targetDate: s.raceDate, goalTime: s.goalTime }
+        data: { goal: `${s.raceDist || 'marathon'} — ${s.raceName}`, targetRace: s.raceName, targetDate: s.raceDate, goalTime: s.goalTime, raceDist: s.raceDist }
       })
     }).catch(() => {});
   }
@@ -1906,7 +1908,8 @@ function initCoachChat() {
   // Don't auto-fire — user clicks Analyze
 }
 
-async function analyzeWorkout() {
+async function analyzeWorkout(options = {}) {
+  const { skipInitialAnalysis = false } = options;
   if (APP._chatRunning || APP._analyzed) return;
   APP._chatRunning = true;
   APP._analyzed = true;
@@ -1927,7 +1930,10 @@ async function analyzeWorkout() {
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
   document.getElementById('analyze-bar').style.display = 'none';
-  collapseSplits();
+  if (skipInitialAnalysis) {
+    APP._chatRunning = false;
+    return;
+  }
   showTyping();
 
   // Fetch detailed activity if laps not loaded yet
@@ -2058,6 +2064,11 @@ async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text) return;
+
+  if (!APP._analyzed && !APP._chatRunning) {
+    await analyzeWorkout({ skipInitialAnalysis: true });
+  }
+
   input.value = ''; input.style.height = 'auto';
   document.getElementById('suggested-replies').innerHTML = '';
   addMsg('athlete', text);
@@ -2121,6 +2132,7 @@ async function autoSaveWorkoutSummary(workout, firstAiResponse) {
 
 // ── PRESCRIBED WORKOUTS ─────────────────────────────────────
 let APP_RX = null;
+let _rxPollInterval = null;
 
 async function loadPrescribedWeek() {
   // Always show the toggle, even if no prescription exists
@@ -2140,7 +2152,7 @@ async function loadPrescribedWeek() {
   if (summary) summary.textContent = 'Loading...';
 
   try {
-    const res = await fetch(`/api/prescription?athleteId=${APP.athlete.id}&current=true`);
+    const res = await fetch(`/api/prescription?athleteId=${APP.athlete.id}&current=true&t=${Date.now()}`, { cache: 'no-store' });
     const rx = await res.json();
     if (rx && !rx.empty) {
       APP_RX = rx;
@@ -2213,7 +2225,10 @@ function renderRxSidebar(rx) {
     row.className = `rx-day-row${isToday?' today':''}${isCompleted?' completed':isMissed?' missed':''}`;
 
     const segs = day.segments || [];
-    const segSummary = segs.map(s => `${s.dist}mi ${s.type}`).join(', ');
+    const segSummary = segs.map(formatRxSegment).join(' · ');
+    const segDetailHtml = segs.length
+      ? `<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px;">${segs.map(s => `<div style="font-size:10px;color:var(--muted);">• ${formatRxSegment(s)}</div>`).join('')}</div>`
+      : '';
 
     const gradeHtml = isCompleted && day.grade
       ? `<span class="rx-grade ${day.letter || gradeToLetter(day.grade)}">${day.letter || gradeToLetter(day.grade)}</span>`
@@ -2232,6 +2247,8 @@ function renderRxSidebar(rx) {
       </div>
       <div class="rx-row-label">${day.label || 'Workout'}</div>
       <div class="rx-row-detail">${day.totalDist ? day.totalDist + ' mi' : ''}${segSummary ? ' · ' + segSummary : ''}</div>
+      ${segDetailHtml}
+      ${isCompleted ? `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--green);margin-top:4px;">✓ COMPLETED${day.completedAt ? ' · ' + new Date(day.completedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : ''}</div>` : ''}
       ${day.coachNote ? `<div style="font-size:10px;color:var(--accent2);margin-top:3px;">📝 ${day.coachNote}</div>` : ''}
       ${btnHtml}
     `;
@@ -2247,6 +2264,25 @@ function renderRxSidebar(rx) {
 
 function gradeToLetter(g) {
   return g >= 90 ? 'A' : g >= 80 ? 'B' : g >= 70 ? 'C' : g >= 60 ? 'D' : 'F';
+}
+
+function formatRxSegment(seg) {
+  if (!seg) return '';
+  const reps = seg.reps && seg.reps > 1 ? `${seg.reps}x ` : '';
+  const dist = seg.dist ? `${seg.dist}${seg.unit || 'mi'}` : '';
+  const type = seg.type ? String(seg.type).toUpperCase() : '';
+  const intensity = seg.intensity ? ` @ ${seg.intensity}` : '';
+  return `${reps}${dist} ${type}${intensity}`.trim();
+}
+
+function startRxPolling() {
+  if (_rxPollInterval || APP.demoMode) return;
+  _rxPollInterval = setInterval(() => {
+    if (APP.athlete && !document.hidden) loadPrescribedWeek();
+  }, 3000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && APP.athlete) loadPrescribedWeek();
+  });
 }
 
 function rxAnalyze(dayKey) {
