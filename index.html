@@ -999,6 +999,35 @@ async function saveChat(workoutId, messages) {
   }
 }
 
+function getWorkoutContextLabel() {
+  if (!APP.currentWorkout) return '';
+  return `${APP.currentWorkout.name || 'Workout'} · ${actToMi(APP.currentWorkout).toFixed(1)}mi · ${fmtPace(actPaceMi(APP.currentWorkout))}/mi`;
+}
+
+async function appendTimelineMessage(sender, content) {
+  if (!APP.athlete || !APP.athlete.id || !content) return;
+  try {
+    await fetch('/api/chat-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        athleteId: APP.athlete.id,
+        action: 'append',
+        message: {
+          role: sender === 'ai' ? 'assistant' : 'user',
+          sender,
+          content,
+          timestamp: new Date().toISOString(),
+          workoutId: APP.currentWorkout?.id || null,
+          workoutContext: getWorkoutContextLabel()
+        }
+      })
+    });
+  } catch(e) {
+    console.warn('Timeline append failed:', e);
+  }
+}
+
 // ── STRAVA API ───────────────────────────────────────────────
 async function stravaGet(path) {
   const res = await fetch(`${STRAVA_API}${path}`, {
@@ -2073,6 +2102,7 @@ async function sendMessage() {
   document.getElementById('suggested-replies').innerHTML = '';
   addMsg('athlete', text);
   APP.chatHistory.push({role:'user', content:text});
+  appendTimelineMessage('athlete', text);
   showTyping();
 
   const a = APP.currentWorkout;
@@ -2102,6 +2132,7 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     hideTyping();
     addMsg('ai', reply);
     APP.chatHistory.push({role:'assistant', content:reply});
+    appendTimelineMessage('ai', reply);
     setSuggestedReplies([]);
   } catch(e) {
     hideTyping();
