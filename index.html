@@ -738,6 +738,7 @@ const APP = {
   _analyzed: false,
   _chatRunning: false,
   _lastChatWorkoutId: null,
+  _workoutSelectSeq: 0,
   weeklyMi: [],
   excluded: new Set(),
 };
@@ -1637,6 +1638,7 @@ function buildWorkoutHistory() {
 
 async function selectWorkout(activity, el) {
   if (APP._chatRunning) return;
+  const selectSeq = ++APP._workoutSelectSeq;
   document.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
   const isFirstLoad = !APP.currentWorkout || !APP.chatInitialized;
@@ -1653,6 +1655,7 @@ async function selectWorkout(activity, el) {
       detailed = activity; // fallback
     }
   }
+  if (selectSeq !== APP._workoutSelectSeq) return;
 
   APP.currentWorkout = detailed;
   APP._analyzed = !!APP.analyzedWorkouts[detailed.id];
@@ -1683,7 +1686,8 @@ async function selectWorkout(activity, el) {
   APP.chatHistory = [];
   APP.chatInitialized = true;
   // Restore saved conversation for this workout (KV -> localStorage)
-  await loadChatHistory(detailed.id);
+  await loadChatHistory(detailed.id, selectSeq);
+  if (selectSeq !== APP._workoutSelectSeq || !APP.currentWorkout || APP.currentWorkout.id !== detailed.id) return;
   addWorkoutSeparator(detailed);
   document.getElementById('analyze-bar').style.display = 'flex';
   updateAnalyzeButton();
@@ -2153,9 +2157,21 @@ async function sendMessage() {
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
+  const smallTalk = isSmallTalkMessage(text);
 
   const thisWeekActsSend = APP.activities.filter(x => new Date(x.start_date).getTime() >= (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (new Date().getDay()+6)%7); return d.getTime(); })());
-  const systemPrompt = `${p.prompt}
+  const systemPrompt = smallTalk
+    ? `You are an AI running coach talking directly to the athlete.
+The athlete sent: "${text}"
+Respond as a normal human coach in 1 short sentence.
+Do not analyze workout metrics unless the athlete explicitly asks for analysis.
+Keep it friendly and athlete-facing ("you").`
+    : `${p.prompt}
+
+PRIORITY RULES:
+- You are speaking directly to the athlete.
+- Do not force workout analysis for greetings or social messages.
+- Only give detailed workout analysis when the athlete asks for it.
 
 WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPaceMi(a))}/mi${a.average_heartrate ? `, HR ${Math.round(a.average_heartrate)}bpm avg` : ''}.
 THIS WEEK: ${thisWeekActsSend.length} run(s), ${thisWeekActsSend.reduce((s,x)=>s+actToMi(x),0).toFixed(1)} miles.
@@ -2188,6 +2204,17 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
   }
+}
+
+function isSmallTalkMessage(text) {
+  const normalized = (text || '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return false;
+  if (normalized.length > 40) return false;
+  return /^(hi|hey|hello|yo|sup|whats up|how are you|how r u|good morning|good afternoon|good evening|thanks|thank you|ok|okay|cool|nice)$/.test(normalized);
 }
 
 async function autoSaveWorkoutSummary(workout, firstAiResponse) {
@@ -2473,10 +2500,16 @@ function renderChatFromHistory(history) {
   container.scrollTop = 999999;
 }
 
-async function loadChatHistory(workoutId) {
+async function loadChatHistory(workoutId, selectSeq = null) {
   if (!workoutId) return false;
   const container = document.getElementById('chat-messages');
+  const isStaleSelection = () => {
+    if (!APP.currentWorkout || APP.currentWorkout.id !== workoutId) return true;
+    if (selectSeq === null) return false;
+    return selectSeq !== APP._workoutSelectSeq;
+  };
   const applyHistoryPayload = (raw) => {
+    if (isStaleSelection()) return false;
     if (!raw || typeof raw !== 'object') return false;
     if (Array.isArray(raw)) {
       renderChatFromHistory(raw);
@@ -2506,6 +2539,7 @@ async function loadChatHistory(workoutId) {
       const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}&workoutId=${workoutId}`);
       if (res.ok) {
         const data = await res.json();
+        if (isStaleSelection()) return false;
         const payload = data && (data.messages !== undefined ? data.messages : data);
         if (applyHistoryPayload(payload)) return true;
       }
