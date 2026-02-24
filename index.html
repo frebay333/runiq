@@ -665,7 +665,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 
       <div id="analyze-bar" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--s2);">
         <div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:1px;">Select a workout then analyze</div>
-        <button onclick="analyzeWorkout()" style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:2px;background:var(--accent);color:#000;border:none;padding:6px 18px;border-radius:2px;cursor:pointer;font-weight:700;">⚡ ANALYZE</button>
+        <button id="analyze-btn" onclick="analyzeWorkout()" style="font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:2px;background:var(--accent);color:#000;border:none;padding:6px 18px;border-radius:2px;cursor:pointer;font-weight:700;">⚡ ANALYZE</button>
       </div>
       <div class="chat-messages" id="chat-messages"></div>
       <div class="typing-indicator" id="typing-ind">
@@ -734,6 +734,10 @@ const APP = {
   currentPersona: 'neighborbob',
   chatHistory: [],
   chatInitialized: false,
+  analyzedWorkouts: {},
+  _analyzed: false,
+  _chatRunning: false,
+  _lastChatWorkoutId: null,
   weeklyMi: [],
   excluded: new Set(),
 };
@@ -1650,7 +1654,7 @@ async function selectWorkout(activity, el) {
   }
 
   APP.currentWorkout = detailed;
-  APP._analyzed = false;
+  APP._analyzed = !!APP.analyzedWorkouts[detailed.id];
   APP._chatRunning = false;
   renderWorkoutBanner(detailed);
   // Auto-grade against prescription
@@ -1674,15 +1678,17 @@ async function selectWorkout(activity, el) {
     if (existing) existing.remove();
   }
   document.getElementById('ping-btn').className = 'ping-btn';
-  document.getElementById('chat-messages').innerHTML = '';
-  document.getElementById('suggested-replies').innerHTML = '';
-  APP.chatHistory = [];
-  APP.chatInitialized = true;
-  // Try to restore saved conversation
-  const hadHistory = loadChatHistory(detailed.id);
-  if (!hadHistory) {
-    document.getElementById('analyze-bar').style.display = 'flex';
+  if (!APP.chatInitialized) {
+    document.getElementById('chat-messages').innerHTML = '';
+    document.getElementById('suggested-replies').innerHTML = '';
+    APP.chatHistory = [];
+    APP.chatInitialized = true;
+    // Try to restore saved conversation on first load only
+    loadChatHistory(detailed.id);
   }
+  addWorkoutSeparator(detailed);
+  document.getElementById('analyze-bar').style.display = 'flex';
+  updateAnalyzeButton();
   renderWeeklySummary();
 }
 
@@ -1937,28 +1943,51 @@ function initCoachChat() {
   // Don't auto-fire — user clicks Analyze
 }
 
+function addWorkoutSeparator(workout) {
+  if (!workout || !workout.id) return;
+  if (APP._lastChatWorkoutId === workout.id) return;
+  APP._lastChatWorkoutId = workout.id;
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const el = document.createElement('div');
+  el.className = 'msg';
+  el.style.cssText = 'align-self:center;opacity:.7;';
+  el.innerHTML = `
+    <div class="msg-bubble" style="font-family:IBM Plex Mono,monospace;font-size:10px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:var(--s2);color:var(--muted);">
+      WORKOUT: ${workout.name || 'Workout'}
+    </div>`;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function updateAnalyzeButton() {
+  const btn = document.getElementById('analyze-btn');
+  if (!btn || !APP.currentWorkout) return;
+  const analyzed = !!APP.analyzedWorkouts[APP.currentWorkout.id];
+  btn.textContent = analyzed ? '⚡ RE-ANALYZE' : '⚡ ANALYZE';
+}
+
 async function analyzeWorkout(options = {}) {
   const { skipInitialAnalysis = false } = options;
-  if (APP._chatRunning || APP._analyzed) return;
+  if (!APP.currentWorkout) return;
+  if (APP._chatRunning) return;
   APP._chatRunning = true;
   APP._analyzed = true;
-  if (!APP.currentWorkout) return;
+  APP.analyzedWorkouts[APP.currentWorkout.id] = true;
+  updateAnalyzeButton();
   // Load previous chat history for this workout if available
   const savedKey = `chat_${APP.currentWorkout.id}`;
   const saved = localStorage.getItem(savedKey);
-  if (saved) {
+  const hasChat = !!document.getElementById('chat-messages')?.innerHTML?.trim() || APP.chatHistory.length;
+  if (saved && !hasChat) {
     const parsed = JSON.parse(saved);
     document.getElementById('chat-messages').innerHTML = parsed.html || '';
     APP.chatHistory = parsed.history || [];
     document.getElementById('suggested-replies').innerHTML = '';
-    document.getElementById('analyze-bar').style.display = 'none';
     APP._chatRunning = false;
     return;
   }
-  APP.chatHistory = [];
-  document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('suggested-replies').innerHTML = '';
-  document.getElementById('analyze-bar').style.display = 'none';
   if (skipInitialAnalysis) {
     APP._chatRunning = false;
     return;
@@ -2414,7 +2443,6 @@ function loadChatHistory(workoutId) {
     if (data && data.messages) {
       document.getElementById('chat-messages').innerHTML = data.messages;
       APP.chatHistory = data.history || [];
-      document.getElementById('analyze-bar').style.display = 'none';
       document.getElementById('chat-messages').scrollTop = 999999;
       return true;
     }
