@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-logo">RunIQ</div>
-    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.8</div>
+    <div class="topbar-badge">⚡ Coach Backroom</div><div style="font-family:IBM Plex Mono,monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:1px;margin-right:auto;margin-left:8px;">v0.7.11</div>
     <div class="topbar-coach">
       <div class="coach-avatar">👨‍💼</div>
       <span style="font-size:13px;color:#fff;">Coach Mike</span>
@@ -519,9 +519,10 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
                 <div class="section-title" style="margin-bottom:2px;">Weekly Prescription</div>
                 <div id="rx-phase-badge" style="font-family:IBM Plex Mono,monospace;font-size:9px;color:var(--blue);letter-spacing:1px;"></div>
               </div>
-              <div style="display:flex;gap:8px;align-items:center;">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                 <div id="rx-status-badge" style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:rgba(255,159,67,.1);border:1px solid rgba(255,159,67,.3);color:var(--orange);">DRAFT</div>
                 <button class="btn btn-ghost" style="font-size:9px;padding:5px 12px;" onclick="generateRxDraft()">🤖 AI Draft</button>
+                <button class="btn btn-ghost" style="font-size:9px;padding:5px 12px;" onclick="createManualRx()">✍ Manual Entry</button>
               </div>
             </div>
 
@@ -955,11 +956,26 @@ function computeAthleteStats(a) {
   };
 }
 
-function calcMarathonEstimate(a) {
-  // Prefer the saved estimate from the athlete's Race Time Estimator page
-  if (a._marathonEstimate) return a._marathonEstimate;
-  // Fallback: simple avg pace calc
-  const acts = a.activities || [];
+function resolveRaceDist(a) {
+  const raw = (a?._raceDist || '').toLowerCase();
+  if (raw.includes('10')) return '10k';
+  if (raw.includes('half') || raw === 'hm') return 'half';
+  return 'marathon';
+}
+
+function calcRaceEstimate(a) {
+  // Prefer athlete-side Race Estimator values persisted from index.html
+  const dist = resolveRaceDist(a);
+  const est = a?._raceEstimates || {};
+  if (dist === '10k' && est.t10k) return est.t10k;
+  if (dist === 'half' && est.thm) return est.thm;
+  if (dist === 'marathon' && est.tm) return est.tm;
+
+  // Backward compatibility with old memory key
+  if (a?._marathonEstimate) return a._marathonEstimate;
+
+  // Fallback: simple avg pace calc (marathon projection)
+  const acts = a?.activities || [];
   const recentRuns = acts.slice(0, 15).filter(x => (x.distance||0)/1609.34 > 1);
   if (!recentRuns.length) return null;
   const avgPaceSec = recentRuns.reduce((s,x) => {
@@ -986,7 +1002,7 @@ function renderOverview() {
   }
 
   // Header: name + race info
-  const estTimeCalc = calcMarathonEstimate(a);
+  const estTimeCalc = calcRaceEstimate(a);
   const estDisplay = estTimeCalc || a.estTime || '—';
   document.getElementById('overview-athlete-name').innerHTML =
     `${a.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${a.goal} · ${a.nextRaceDate} · Est. ${estDisplay}</span>`;
@@ -1221,12 +1237,14 @@ function populateMemoryUI(mem) {
     if (mem.goal) currentAthlete.goal = mem.goal;
     if (mem.targetRace) currentAthlete.nextRaceDate = mem.targetRace;
     if (mem.targetDate) currentAthlete.nextRaceDate = mem.targetDate;
-    if (mem.goalTime) currentAthlete.estTime = mem.goalTime;
+    if (mem.goalTime) currentAthlete.goalTime = mem.goalTime;
+    if (mem.raceDist) currentAthlete._raceDist = mem.raceDist;
+    if (mem.raceEstimates) currentAthlete._raceEstimates = mem.raceEstimates;
     if (mem.marathonEstimate) currentAthlete._marathonEstimate = mem.marathonEstimate;
     // Re-render the overview header with updated info
     const hdrEl = document.getElementById('overview-athlete-name');
     if (hdrEl) {
-      hdrEl.innerHTML = `${currentAthlete.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${currentAthlete.goal || '—'} · ${currentAthlete.nextRaceDate || '—'} · Est. ${currentAthlete.estTime || '—'}</span>`;
+      hdrEl.innerHTML = `${currentAthlete.name} <span style="color:var(--muted);font-size:14px;font-weight:300;font-family:'IBM Plex Sans',sans-serif;">· ${currentAthlete.goal || '—'} · ${currentAthlete.nextRaceDate || '—'} · Est. ${calcRaceEstimate(currentAthlete) || '—'}</span>`;
     }
     renderRoster();
   }
@@ -1362,6 +1380,7 @@ function addRestriction() {
 // ══════════════════════════════════════
 let currentRxPlan = null;
 let rxChatHistory = [];
+let _rxSyncInterval = null;
 
 function getNextMonday() {
   const d = new Date();
@@ -1377,9 +1396,30 @@ function getDayLabel(isoDate) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
+function startRxSyncPolling() {
+  if (_rxSyncInterval) return;
+  _rxSyncInterval = setInterval(async () => {
+    if (!currentAthlete || !document.getElementById('tab-rx')?.classList.contains('active')) return;
+    try {
+      const res = await fetch(`/api/prescription?athleteId=${currentAthlete.id}&current=true&t=${Date.now()}`, { cache: 'no-store' });
+      const rx = await res.json();
+      if (rx && !rx.empty && JSON.stringify(rx) !== JSON.stringify(currentRxPlan)) {
+        currentRxPlan = rx;
+        renderRxGrid(rx);
+        updateRxStatus(rx.status || 'draft');
+      }
+    } catch(e) {}
+  }, 3000);
+}
+
+function stopRxSyncPolling() {
+  if (_rxSyncInterval) { clearInterval(_rxSyncInterval); _rxSyncInterval = null; }
+}
+
 async function loadRxTab() {
   const a = currentAthlete;
   if (!a) return;
+  startRxSyncPolling();
 
   // Show phase info
   const mem = await fetchMemory(a.id);
@@ -1443,7 +1483,11 @@ function renderEmptyRxGrid() {
   const grid = document.getElementById('rx-days-grid');
   grid.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-family:IBM Plex Mono,monospace;font-size:11px;border:1px dashed var(--border);border-radius:8px;">
     NO PRESCRIPTION FOR NEXT WEEK YET<br><br>
-    <span style="font-size:10px;">Click "🤖 AI Draft" to generate, or build manually</span>
+    <span style="font-size:10px;">Use either option below to create next week:</span>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;">
+      <button class="btn btn-ghost" style="font-size:10px;padding:6px 12px;" onclick="generateRxDraft()">🤖 AI Draft</button>
+      <button class="btn btn-ghost" style="font-size:10px;padding:6px 12px;" onclick="createManualRx()">✍ Manual Entry</button>
+    </div>
   </div>`;
   document.getElementById('rx-actions').style.display = 'none';
 }
@@ -1469,6 +1513,9 @@ function renderRxGrid(rx) {
     const gradeHtml = hasGrade
       ? `<div class="grade-badge grade-${day.letter || gradeToLetter(day.grade)}">${day.letter || gradeToLetter(day.grade)}</div>`
       : '';
+    const completionChip = day.completed
+      ? `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 7px;border-radius:10px;color:var(--green);border:1px solid rgba(77,255,145,.3);background:rgba(77,255,145,.08);">COMPLETED</div>`
+      : `<div style="font-family:IBM Plex Mono,monospace;font-size:9px;padding:2px 7px;border-radius:10px;color:var(--muted);border:1px solid var(--border);">PENDING</div>`;
 
     const distHtml = day.totalDist ? `<span class="rx-day-dist">${day.totalDist} mi</span>` : '';
 
@@ -1479,6 +1526,7 @@ function renderRxGrid(rx) {
         ${distHtml}
         <div style="display:flex;gap:6px;align-items:center;">
           ${gradeHtml}
+          ${completionChip}
           <div class="rx-day-type ${day.type || 'rest'}">${day.type || 'rest'}</div>
         </div>
       </div>
@@ -1499,13 +1547,18 @@ function renderRxGrid(rx) {
 
 function renderSegments(segs, dayKey) {
   if (!segs.length) return '';
-  return `<div style="margin-bottom:8px;">` + segs.map((s,i) => `
+  return `<div style="margin-bottom:8px;">` + segs.map((s,i) => {
+    const reps = s.reps && s.reps > 1 ? `${s.reps}x` : '';
+    const dist = s.dist ? `${s.dist}${s.unit || 'mi'}` : '';
+    const type = (s.type || '').toUpperCase();
+    const detail = [reps, dist, type].filter(Boolean).join(' ');
+    return `
     <div class="rx-segment-row">
-      <div class="rx-seg-type">${s.type}</div>
-      <div class="rx-seg-dist">${s.dist}mi</div>
-      <div style="font-size:11px;color:var(--muted);">${s.intensity || ''}</div>
+      <div class="rx-seg-type">${detail || 'SEG'}</div>
+      <div class="rx-seg-dist">${s.intensity || ''}</div>
+      <div style="font-size:11px;color:var(--muted);">${s.note || ''}</div>
     </div>
-  `).join('') + '</div>';
+  `;}).join('') + '</div>';
 }
 
 function gradeToLetter(g) {
@@ -1669,6 +1722,23 @@ function updateRxStatus(status) {
   };
   badge.style.cssText = `font-family:IBM Plex Mono,monospace;font-size:9px;padding:3px 8px;border-radius:10px;background:${styles[status] || styles.draft}`;
   badge.textContent = (status || 'DRAFT').toUpperCase();
+}
+
+function createManualRx() {
+  const a = currentAthlete;
+  if (!a) return;
+  const dayOrder = ['mon','tue','wed','thu','fri','sat','sun'];
+  currentRxPlan = {
+    athleteId: a.id,
+    weekStart: getNextMonday(),
+    status: 'draft',
+    totalMiles: 0,
+    days: Object.fromEntries(dayOrder.map(d => [d, { type: 'rest', label: 'Rest', segments: [], totalDist: 0 }]))
+  };
+  document.getElementById('rx-reasoning').style.display = 'none';
+  renderRxGrid(currentRxPlan);
+  updateRxStatus('draft');
+  addRxMsg('ai', `Manual prescription created for ${a.name}. Click ✏ Edit on each day to build workouts from scratch.`);
 }
 
 async function generateRxDraft() {
@@ -2169,7 +2239,7 @@ async function loadGoalVsEstimate() {
     if (gtInput && !gtInput.value) gtInput.value = goalTime;
 
     // Use shared estimator
-    const mEstStr = calcMarathonEstimate(a);
+    const mEstStr = calcRaceEstimate(a);
     if (!mEstStr) return;
 
     // Parse both times to seconds for delta
@@ -2198,6 +2268,7 @@ function switchTab(id, el) {
   el.classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
   if (id === 'rx') loadRxTab();
+  else stopRxSyncPolling();
   if (id === 'instructions') { renderInstructions(); loadGoalVsEstimate(); }
   if (id === 'chat') { renderMessaging(); startChatAutoRefresh(); }
   else stopChatAutoRefresh();

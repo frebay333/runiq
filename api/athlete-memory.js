@@ -1,4 +1,4 @@
-// api/athlete-memory.js — v0.6.9.1
+// api/athlete-memory.js — v0.6.9.2
 // Stores and retrieves long-term coaching memory per athlete
 
 export default async function handler(req, res) {
@@ -53,6 +53,8 @@ export default async function handler(req, res) {
     targetRace: '',
     targetDate: '',
     goalTime: '',
+    raceDist: '',
+    raceEstimates: null,
     injuryHistory: [],
     coachNotes: [],
     workoutSummaries: [],
@@ -81,6 +83,7 @@ export default async function handler(req, res) {
         if (data.targetRace !== undefined) mem.targetRace = data.targetRace;
         if (data.targetDate !== undefined) mem.targetDate = data.targetDate;
         if (data.goalTime !== undefined) mem.goalTime = data.goalTime;
+        if (data.raceDist !== undefined) mem.raceDist = data.raceDist;
         if (data.athletePreferences !== undefined) mem.athletePreferences = data.athletePreferences;
       }
       else if (action === 'add_note') {
