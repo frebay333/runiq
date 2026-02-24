@@ -1636,6 +1636,7 @@ function buildWorkoutHistory() {
 }
 
 async function selectWorkout(activity, el) {
+  if (APP._chatRunning) return;
   document.querySelectorAll('.history-item').forEach(i => i.classList.remove('selected'));
   el.classList.add('selected');
   const isFirstLoad = !APP.currentWorkout || !APP.chatInitialized;
@@ -1655,7 +1656,6 @@ async function selectWorkout(activity, el) {
 
   APP.currentWorkout = detailed;
   APP._analyzed = !!APP.analyzedWorkouts[detailed.id];
-  APP._chatRunning = false;
   renderWorkoutBanner(detailed);
   // Auto-grade against prescription
   const gradeResult = checkRxGrade(detailed);
@@ -1969,6 +1969,7 @@ async function analyzeWorkout(options = {}) {
   const { skipInitialAnalysis = false } = options;
   if (!APP.currentWorkout) return;
   if (APP._chatRunning) return;
+  const workoutId = APP.currentWorkout.id;
   APP._chatRunning = true;
   APP._analyzed = true;
   APP.analyzedWorkouts[APP.currentWorkout.id] = true;
@@ -2086,6 +2087,10 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
     });
     const data = await res.json();
     const text = data.content?.[0]?.text || 'Error getting response.';
+    if (!APP.currentWorkout || APP.currentWorkout.id !== workoutId) {
+      APP._chatRunning = false;
+      return;
+    }
     hideTyping();
     addMsg('ai', text);
     APP.chatHistory.push({role:'user', content:'Analyze my workout.'});
@@ -2097,6 +2102,10 @@ IMPORTANT — Weather/conditions inference rules: NEVER speculate about humidity
       autoSaveWorkoutSummary(APP.currentWorkout, text);
     }
   } catch(e) {
+    if (!APP.currentWorkout || APP.currentWorkout.id !== workoutId) {
+      APP._chatRunning = false;
+      return;
+    }
     hideTyping();
     addMsg('ai', `Great work on that ${a.name}! ${mi} miles at ${pace}/mi. ${hr ? `Your HR averaged ${hr}bpm. ` : ''}How did it feel?`);
     APP._chatRunning = false;
@@ -2136,6 +2145,11 @@ async function sendMessage() {
   showTyping();
 
   const a = APP.currentWorkout;
+  const workoutId = a && a.id;
+  if (!workoutId) {
+    hideTyping();
+    return;
+  }
   const KB = typeof RUNIQ_KB !== 'undefined' ? RUNIQ_KB : null;
   const personas = KB ? KB.personas : {};
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
@@ -2160,6 +2174,10 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     });
     const data = await res.json();
     const reply = data.content?.[0]?.text || 'Error.';
+    if (!APP.currentWorkout || APP.currentWorkout.id !== workoutId) {
+      hideTyping();
+      return;
+    }
     hideTyping();
     addMsg('ai', reply);
     APP.chatHistory.push({role:'assistant', content:reply});
@@ -2458,23 +2476,38 @@ function renderChatFromHistory(history) {
 async function loadChatHistory(workoutId) {
   if (!workoutId) return false;
   const container = document.getElementById('chat-messages');
+  const applyHistoryPayload = (raw) => {
+    if (!raw || typeof raw !== 'object') return false;
+    if (Array.isArray(raw)) {
+      renderChatFromHistory(raw);
+      return true;
+    }
+    if (Array.isArray(raw.history)) {
+      if (raw.html) {
+        container.innerHTML = raw.html;
+        APP.chatHistory = raw.history || [];
+        container.scrollTop = 999999;
+      } else {
+        renderChatFromHistory(raw.history);
+      }
+      return true;
+    }
+    if (raw.html) {
+      container.innerHTML = raw.html || '';
+      APP.chatHistory = raw.history || [];
+      container.scrollTop = 999999;
+      return true;
+    }
+    return false;
+  };
   // Try KV first
   if (APP.athlete && APP.athlete.id) {
     try {
       const res = await fetch(`/api/chat-history?athleteId=${APP.athlete.id}&workoutId=${workoutId}`);
       if (res.ok) {
         const data = await res.json();
-        const payload = data && data.messages;
-        if (payload && payload.html) {
-          container.innerHTML = payload.html || '';
-          APP.chatHistory = payload.history || [];
-          container.scrollTop = 999999;
-          return true;
-        }
-        if (Array.isArray(payload)) {
-          renderChatFromHistory(payload);
-          return true;
-        }
+        const payload = data && (data.messages !== undefined ? data.messages : data);
+        if (applyHistoryPayload(payload)) return true;
       }
     } catch(e) {}
   }
@@ -2483,12 +2516,7 @@ async function loadChatHistory(workoutId) {
   const legacyKey = `chat_${workoutId}`;
   try {
     const data = JSON.parse(localStorage.getItem(key) || localStorage.getItem(legacyKey));
-    if (data && (data.html || data.messages)) {
-      container.innerHTML = data.html || data.messages || '';
-      APP.chatHistory = data.history || [];
-      container.scrollTop = 999999;
-      return true;
-    }
+    if (applyHistoryPayload(data)) return true;
   } catch(e) {}
   return false;
 }
