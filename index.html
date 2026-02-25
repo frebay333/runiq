@@ -71,6 +71,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--text);backd
 .settings-btn-strava{width:100%;background:transparent;border:1px solid var(--border);border-radius:4px;padding:7px;font-family:IBM Plex Mono,monospace;font-size:10px;color:var(--muted);cursor:pointer;transition:all .2s;margin-top:4px;}
 .settings-btn-strava:hover{border-color:var(--accent2);color:var(--accent2);}
 
+/* ── TOAST ── */
+.toast{position:fixed;top:64px;right:18px;z-index:450;background:var(--s1);border:1px solid var(--border2);border-left:3px solid var(--accent2);border-radius:8px;padding:10px 14px;font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:1px;color:var(--text);box-shadow:0 12px 32px rgba(0,0,0,.12);opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
+.toast.show{opacity:1;transform:translateY(0);}
+
 /* ── PAGES ── */
 .page{display:none;padding-top:52px;min-height:100vh;}
 .page.active{display:block;}
@@ -411,6 +415,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     </div>
   </div>
 </nav>
+
+<div id="toast" class="toast" aria-live="polite"></div>
 
 <!-- ══════ PAGE 1: ESTIMATOR ══════ -->
 <div class="page active" id="page-estimator">
@@ -2278,7 +2284,21 @@ async function sendMessage() {
   const p = personas[APP.currentPersona] || { prompt: 'You are a supportive running coach. Keep responses under 60 words. Be conversational, not a report.' };
   const smallTalk = isSmallTalkMessage(text);
 
+  if (!smallTalk) {
+    const planHandled = await tryPlanUpdateFromChat(text);
+    if (planHandled && planHandled.reply) {
+      hideTyping();
+      addMsg('ai', planHandled.reply);
+      APP.chatHistory.push({role:'assistant', content:planHandled.reply});
+      appendTimelineMessage('ai', planHandled.reply);
+      setSuggestedReplies([]);
+      persistChat();
+      return;
+    }
+  }
+
   const thisWeekActsSend = APP.activities.filter(x => new Date(x.start_date).getTime() >= (() => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - (new Date().getDay()+6)%7); return d.getTime(); })());
+  const rxContext = buildRxSummaryShort(APP_RX);
   const systemPrompt = smallTalk
     ? `You are an AI running coach talking directly to the athlete.
 The athlete sent: "${text}"
@@ -2294,7 +2314,8 @@ PRIORITY RULES:
 
 WORKOUT CONTEXT: ${a.name} — ${actToMi(a).toFixed(1)} miles @ ${fmtPace(actPaceMi(a))}/mi${a.average_heartrate ? `, HR ${Math.round(a.average_heartrate)}bpm avg` : ''}.
 THIS WEEK: ${thisWeekActsSend.length} run(s), ${thisWeekActsSend.reduce((s,x)=>s+actToMi(x),0).toFixed(1)} miles.
-RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.`;
+RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(act).toFixed(1)}mi`).join(', ')}.
+PRESCRIBED PLAN: ${rxContext}`;
 
   try {
     const res = await fetch('/api/claude', {
@@ -2323,6 +2344,183 @@ RECENT TRAINING: ${APP.activities.slice(0,3).map(act => `${act.name} ${actToMi(a
     hideTyping();
     addMsg('ai', 'Connection issue — try again.');
   }
+}
+
+function shouldCheckPlanChange(text) {
+  const t = (text || '').toLowerCase();
+  return /(change|switch|swap|move|reschedule|can't run|cannot run|can'?t make|skip|miss|tomorrow|next day|race|racing|taper|more volume|less volume|too much|too little|increase mileage|decrease mileage|need more|need less)/.test(t);
+}
+
+function showToast(msg, timeout = 2600) {
+  const el = document.getElementById('toast');
+  if (!el || !msg) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+  }, timeout);
+}
+
+function getDayKeyFromDate(d) {
+  return ['sun','mon','tue','wed','thu','fri','sat'][d.getDay()];
+}
+
+function buildRecentRunsSummary(limit = 8) {
+  const acts = (APP.activities || []).slice(0, limit);
+  return acts.map(a => {
+    const date = new Date(a.start_date).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const mi = actToMi(a).toFixed(1);
+    const pace = fmtPace(actPaceMi(a));
+    return `${date} ${a.name} ${mi}mi @ ${pace}/mi`;
+  }).join(' | ');
+}
+
+function buildRxSummaryShort(rx) {
+  if (!rx || !rx.days) return 'No prescription loaded.';
+  const dayOrder = ['mon','tue','wed','thu','fri','sat','sun'];
+  const lines = dayOrder.map(k => {
+    const d = rx.days[k];
+    if (!d) return null;
+    const label = d.label || (d.type === 'rest' ? 'Rest' : 'Workout');
+    const mi = d.totalDist ? `${d.totalDist}mi` : '';
+    const status = d.completed ? 'completed' : 'upcoming';
+    return `${k.toUpperCase()}: ${label}${mi ? ' · ' + mi : ''} (${status})`;
+  }).filter(Boolean);
+  return lines.join(' | ');
+}
+
+function normalizePlanFromAI(planRaw) {
+  if (!planRaw) return null;
+  if (planRaw.days) return planRaw;
+  const hasDayKeys = ['mon','tue','wed','thu','fri','sat','sun'].some(k => planRaw[k]);
+  if (hasDayKeys) return { days: planRaw };
+  return null;
+}
+
+function computeTotalMilesFromDays(days) {
+  if (!days) return 0;
+  return Math.round(Object.values(days).reduce((s,d) => s + (d?.totalDist || 0), 0) * 10) / 10;
+}
+
+function normalizeDayForCompare(day) {
+  if (!day) return null;
+  const d = { ...day };
+  delete d.completed;
+  delete d.completedAt;
+  delete d.grade;
+  delete d.gradeBreakdown;
+  delete d.letter;
+  delete d.activityId;
+  return d;
+}
+
+function getChangedRxDays(prevDays, nextDays) {
+  const order = ['mon','tue','wed','thu','fri','sat','sun'];
+  const changed = [];
+  order.forEach(k => {
+    const a = normalizeDayForCompare(prevDays?.[k] || null);
+    const b = normalizeDayForCompare(nextDays?.[k] || null);
+    if (JSON.stringify(a) !== JSON.stringify(b)) changed.push(k);
+  });
+  return changed;
+}
+
+function formatDayList(keys) {
+  const names = {mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday',sun:'Sunday'};
+  if (!keys || !keys.length) return 'your week';
+  if (keys.length === 1) return names[keys[0]] || keys[0];
+  if (keys.length === 2) return `${names[keys[0]]}, ${names[keys[1]]}`;
+  return `${names[keys[0]]}, ${names[keys[1]]} +${keys.length - 2} more`;
+}
+
+function formatDaySummary(dayKey, days) {
+  const names = {mon:'Monday',tue:'Tuesday',wed:'Wednesday',thu:'Thursday',fri:'Friday',sat:'Saturday',sun:'Sunday'};
+  const d = days?.[dayKey];
+  if (!d) return names[dayKey] || dayKey;
+  const label = d.label || (d.type === 'rest' ? 'Rest' : 'Workout');
+  const dist = d.totalDist ? `${d.totalDist}mi` : '';
+  return `${names[dayKey] || dayKey}: ${label}${dist ? ' · ' + dist : ''}`;
+}
+
+async function tryPlanUpdateFromChat(text) {
+  if (!APP_RX || !APP_RX.days || APP.demoMode || !APP.athlete) return null;
+  if (!shouldCheckPlanChange(text)) return null;
+
+  const today = new Date();
+  const todayKey = getDayKeyFromDate(today);
+  const recentRuns = buildRecentRunsSummary(10);
+  const prevDays = JSON.parse(JSON.stringify(APP_RX.days || {}));
+  const planJson = JSON.stringify(APP_RX.days || {}, null, 2);
+
+  const systemPrompt = `You are an AI running coach assistant. Decide if the athlete's message requires changing the prescribed plan. Use today's date and the plan. If a change is needed, update only upcoming days (never edit completed days). Keep the schema EXACT.
+
+TODAY: ${today.toISOString()} (${todayKey})
+PRESCRIBED PLAN JSON (days only): ${planJson}
+RECENT RUNS: ${recentRuns || 'No recent runs'}
+
+RESPONSE FORMAT:
+<REPLY>1-2 sentences to the athlete confirming the change or explaining why no change.</REPLY>
+If change needed, include:
+<PLAN>
+{"days":{"mon":{"label":"...","type":"easy|tempo|vo2|long|rest","segments":[{"dist":0,"unit":"mi","type":"easy|tempo|vo2|long","intensity":"...","reps":1}],"totalDist":0,"coachNote":""}}}
+</PLAN>
+If no change needed, output only <REPLY> and <NO_CHANGE/>.`;
+
+  try {
+    const resp = await fetch('/api/claude', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-client-side-api-keys':'true'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1200,
+        system: systemPrompt,
+        messages: [{ role:'user', content: `ATHLETE MESSAGE: "${text}"` }],
+        athleteId: APP.athlete ? APP.athlete.id : null,
+        contextDate: today.toISOString()
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const replyMatch = raw.match(/<REPLY>([\s\S]*?)<\/REPLY>/);
+    const planMatch = raw.match(/<PLAN>([\s\S]*?)<\/PLAN>/);
+    const noChange = /<NO_CHANGE\s*\/>/.test(raw);
+    const reply = replyMatch ? replyMatch[1].trim() : null;
+
+    if (planMatch) {
+      try {
+        const updated = normalizePlanFromAI(JSON.parse(planMatch[1].trim()));
+        if (updated && updated.days) {
+          const mergedDays = { ...updated.days };
+          Object.keys(APP_RX.days || {}).forEach(k => {
+            if (APP_RX.days[k]?.completed) mergedDays[k] = APP_RX.days[k];
+          });
+          APP_RX.days = mergedDays;
+          APP_RX.totalMiles = computeTotalMilesFromDays(mergedDays);
+          APP_RX.updatedAt = new Date().toISOString();
+          APP_RX.updatedBy = 'athlete_ai';
+          renderRxSidebar(APP_RX);
+          const changedDays = getChangedRxDays(prevDays, mergedDays).filter(k => !prevDays?.[k]?.completed);
+          if (changedDays.length === 1) {
+            showToast(`Plan updated — ${formatDaySummary(changedDays[0], mergedDays)}`);
+          } else if (changedDays.length > 1) {
+            showToast(`Plan updated — ${formatDaySummary(changedDays[0], mergedDays)} +${changedDays.length - 1} more`);
+          }
+
+          await fetch('/api/prescription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ athleteId: APP.athlete.id, action: 'athlete_update', prescription: APP_RX })
+          });
+        }
+      } catch(e) {}
+    }
+
+    if (reply) return { reply, changed: !!planMatch };
+    if (noChange) return { reply: null, changed: false };
+  } catch(e) {}
+
+  return null;
 }
 
 function isSmallTalkMessage(text) {

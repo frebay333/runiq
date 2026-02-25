@@ -86,11 +86,11 @@ export default async function handler(req, res) {
 
     // ── POST: save/update prescription ───────────────────
     if (req.method === 'POST') {
-      const { athleteId, action, prescription } = req.body;
+      const { athleteId, action, prescription, weekStart: bodyWeekStart } = req.body;
       if (!athleteId) return res.status(400).json({ error: 'Missing athleteId' });
       if (!action) return res.status(400).json({ error: 'Missing action' });
 
-      const weekStart = prescription?.weekStart || getNextMonday();
+      const weekStart = bodyWeekStart || prescription?.weekStart || getNextMonday();
       const key = `prescription:${athleteId}:${weekStart}`;
 
       if (action === 'save_draft') {
@@ -122,6 +122,18 @@ export default async function handler(req, res) {
           rx.days[day].gradeBreakdown = gradeBreakdown;
           rx.days[day].completedAt = new Date().toISOString();
         }
+        await kvSet(key, rx);
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === 'athlete_update') {
+        const rx = await kvGet(key);
+        if (!rx) return res.status(404).json({ error: 'No prescription found' });
+        if (!prescription || !prescription.days) return res.status(400).json({ error: 'Missing prescription.days' });
+        rx.days = prescription.days;
+        if (prescription.totalMiles !== undefined) rx.totalMiles = prescription.totalMiles;
+        rx.updatedAt = new Date().toISOString();
+        rx.updatedBy = 'athlete_ai';
         await kvSet(key, rx);
         return res.status(200).json({ success: true });
       }
