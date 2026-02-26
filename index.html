@@ -98,6 +98,18 @@ select,input[type=text],input[type=number],textarea{width:100%;background:var(--
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;cursor:pointer;}
 select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 .field{margin-bottom:14px;}
+.slider-row{display:flex;flex-direction:column;gap:6px;}
+.slider-meta{display:flex;justify-content:space-between;font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:1px;color:var(--muted);}
+.range-input{width:100%;background:transparent;appearance:none;height:18px;padding:0;margin:2px 0 4px;}
+.range-input:focus{outline:none;}
+.range-input::-webkit-slider-runnable-track{height:6px;background:linear-gradient(90deg, rgba(249,115,22,.25), rgba(37,99,235,.25));border:1px solid var(--border);border-radius:999px;}
+.range-input::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #000;margin-top:-5px;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.range-input::-moz-range-track{height:6px;background:linear-gradient(90deg, rgba(249,115,22,.25), rgba(37,99,235,.25));border:1px solid var(--border);border-radius:999px;}
+.range-input::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #000;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.range-input::-ms-track{height:6px;background:transparent;border-color:transparent;color:transparent;}
+.range-input::-ms-fill-lower{background:rgba(249,115,22,.25);border:1px solid var(--border);border-radius:999px;}
+.range-input::-ms-fill-upper{background:rgba(37,99,235,.25);border:1px solid var(--border);border-radius:999px;}
+.range-input::-ms-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #000;box-shadow:0 2px 6px rgba(0,0,0,.2);}
 
 /* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;font-family:IBM Plex Mono,monospace;font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;border:none;border-radius:var(--r);cursor:pointer;transition:all .2s;}
@@ -474,6 +486,16 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
           <div class="field">
             <label class="field-label">Race Altitude (ft)</label>
             <input id="race-alt" class="settings-input" type="number" min="-1000" max="15000" step="50" value="0" oninput="saveEnvSettings(); updateEstimates()" style="margin-bottom:0;">
+          </div>
+          <div class="field">
+            <label class="field-label">Positive/Negative Friends &amp; External Factors</label>
+            <div class="slider-row">
+              <input id="race-social" class="range-input" type="range" min="-10" max="10" step="1" value="0" oninput="onSocialInput(); saveEnvSettings(); updateEstimates()">
+              <div class="slider-meta">
+                <span id="race-social-label">Neutral</span>
+                <span id="race-social-value">0 | 0.0%</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="card">
@@ -1201,7 +1223,11 @@ function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
 
 function loadEnvSettings() {
   const saved = localStorage.getItem('runiq_estimator_env');
-  if (!saved) return;
+  if (!saved) {
+    const socialEl = document.getElementById('race-social');
+    if (socialEl) updateSocialDisplay(parseFloat(socialEl.value));
+    return;
+  }
   try {
     const s = JSON.parse(saved);
     if (s.tempF !== undefined && document.getElementById('race-temp')) {
@@ -1213,18 +1239,25 @@ function loadEnvSettings() {
     if (s.altFt !== undefined && document.getElementById('race-alt')) {
       document.getElementById('race-alt').value = s.altFt;
     }
+    if (s.socialScore !== undefined && document.getElementById('race-social')) {
+      document.getElementById('race-social').value = s.socialScore;
+    }
   } catch(e) {}
+  const socialEl = document.getElementById('race-social');
+  if (socialEl) updateSocialDisplay(parseFloat(socialEl.value));
 }
 
 function saveEnvSettings() {
   const tempEl = document.getElementById('race-temp');
   const rhEl = document.getElementById('race-rh');
   const altEl = document.getElementById('race-alt');
-  if (!tempEl && !rhEl && !altEl) return;
+  const socialEl = document.getElementById('race-social');
+  if (!tempEl && !rhEl && !altEl && !socialEl) return;
   const s = {
     tempF: tempEl ? tempEl.value : '',
     rh: rhEl ? rhEl.value : '',
-    altFt: altEl ? altEl.value : ''
+    altFt: altEl ? altEl.value : '',
+    socialScore: socialEl ? socialEl.value : ''
   };
   localStorage.setItem('runiq_estimator_env', JSON.stringify(s));
 }
@@ -1277,6 +1310,70 @@ function calcAltitudeFactor(altFt, raceSeconds) {
   return 1 + clamp(penalty, 0, 0.20);
 }
 
+const SOCIAL_ANCHORS = [
+  { score: -10, p: 0.06 },
+  { score: -8, p: 0.045 },
+  { score: -7, p: 0.03 },
+  { score: -4, p: 0.01 },
+  { score: -2, p: 0.003 },
+  { score: 0, p: 0.0 },
+  { score: 2, p: -0.003 },
+  { score: 4, p: -0.01 },
+  { score: 7, p: -0.03 },
+  { score: 8, p: -0.045 },
+  { score: 10, p: -0.06 },
+];
+
+function interpSocialPercent(score) {
+  if (!isFinite(score)) return 0;
+  const s = clamp(score, -10, 10);
+  const anchors = SOCIAL_ANCHORS;
+  if (s <= anchors[0].score) return anchors[0].p;
+  if (s >= anchors[anchors.length - 1].score) return anchors[anchors.length - 1].p;
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    if (s >= a.score && s <= b.score) {
+      const t = (s - a.score) / (b.score - a.score);
+      return a.p + (b.p - a.p) * t;
+    }
+  }
+  return 0;
+}
+
+function socialBand(score) {
+  const s = clamp(score, -10, 10);
+  const abs = Math.abs(s);
+  if (abs <= 2) return 'Negligible';
+  if (abs <= 4) return 'Small';
+  if (abs <= 7) return 'Moderate';
+  return 'Large';
+}
+
+function updateSocialDisplay(score) {
+  const labelEl = document.getElementById('race-social-label');
+  const valueEl = document.getElementById('race-social-value');
+  if (!labelEl || !valueEl || !isFinite(score)) return;
+  const s = clamp(score, -10, 10);
+  const p = interpSocialPercent(s) * 100;
+  const band = socialBand(s);
+  const dir = s === 0 ? 'Neutral' : (s > 0 ? 'Positive' : 'Negative');
+  const label = s === 0 ? 'Neutral' : `${dir} · ${band}`;
+  const pTxt = `${p > 0 ? '+' : ''}${p.toFixed(1)}%`;
+  valueEl.textContent = `${s > 0 ? '+' : ''}${s} | ${pTxt}`;
+  labelEl.textContent = label;
+}
+
+function onSocialInput() {
+  const score = parseFloat(document.getElementById('race-social')?.value);
+  if (isFinite(score)) updateSocialDisplay(score);
+}
+
+function calcSocialFactor(score) {
+  const p = interpSocialPercent(score);
+  return 1 + clamp(p, -0.06, 0.06);
+}
+
 function updateEstimates() {
   const method = document.getElementById('est-method').value;
   const weeks = parseInt(document.getElementById('est-window').value);
@@ -1285,6 +1382,9 @@ function updateEstimates() {
   const tempF = parseFloat(document.getElementById('race-temp')?.value);
   const rh = parseFloat(document.getElementById('race-rh')?.value);
   const altFt = parseFloat(document.getElementById('race-alt')?.value);
+  const socialScore = parseFloat(document.getElementById('race-social')?.value);
+
+  if (isFinite(socialScore)) updateSocialDisplay(socialScore);
 
   document.getElementById('method-blurb').textContent = METHOD_DESC[method];
 
@@ -1329,17 +1429,18 @@ function updateEstimates() {
   }
 
   const wbgtC = calcWBGT_C(tempF, rh);
-  const envM = calcHeatFactor(wbgtC, baseAdj.tm) * calcAltitudeFactor(altFt, baseAdj.tm);
+  const socialM = calcSocialFactor(socialScore);
+  const envM = calcHeatFactor(wbgtC, baseAdj.tm) * calcAltitudeFactor(altFt, baseAdj.tm) * socialM;
 
   // Method comparison (environment-adjusted)
   if (baseData) {
-    const envVol = calcHeatFactor(wbgtC, baseData.tm) * calcAltitudeFactor(altFt, baseData.tm);
+    const envVol = calcHeatFactor(wbgtC, baseData.tm) * calcAltitudeFactor(altFt, baseData.tm) * socialM;
     document.getElementById('cmp-vol').textContent = fmtTime(baseData.tm * 1.0 * envVol);
     document.getElementById('cmp-ctl').textContent = fmtTime(baseData.tm * 1.008 * envVol);
     document.getElementById('cmp-cp').textContent  = fmtTime(baseData.tm * 1.018 * envVol);
   }
   if (baseTanda) {
-    const envTanda = calcHeatFactor(wbgtC, baseTanda.tm) * calcAltitudeFactor(altFt, baseTanda.tm);
+    const envTanda = calcHeatFactor(wbgtC, baseTanda.tm) * calcAltitudeFactor(altFt, baseTanda.tm) * socialM;
     document.getElementById('cmp-tanda').textContent = fmtTime(baseTanda.tm * envTanda);
   }
 
@@ -1352,7 +1453,7 @@ function updateEstimates() {
   pairs.forEach(p => {
     const heat = calcHeatFactor(wbgtC, p.t);
     const alt = calcAltitudeFactor(altFt, p.t);
-    const env = heat * alt;
+    const env = heat * alt * socialM;
     const finalT = p.t * env;
     if (p.id === '10k') t10kFinal = finalT;
     if (p.id === 'hm') thmFinal = finalT;
