@@ -111,6 +111,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 /* ── GRIDS ── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
 .stat-block{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;}
 .stat-label{font-family:IBM Plex Mono,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
 .stat-value{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:600;line-height:1;}
@@ -439,6 +440,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
               <option value="volume">Volume &amp; Pace</option>
               <option value="ctl">CTL / ATL (Banister)</option>
               <option value="cp">Critical Race Pace</option>
+              <option value="tanda">Tanda Training Formula</option>
             </select>
           </div>
           <div class="field">
@@ -460,6 +462,18 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
             <div style="display:flex;align-items:center;gap:8px;font-family:IBM Plex Mono,monospace;font-size:11px;color:var(--muted);">
               Race in <input type="number" id="race-days" value="14" min="1" max="42" style="width:52px;text-align:center;" oninput="updateEstimates()"> days
             </div>
+          </div>
+          <div class="field" style="margin-top:12px;">
+            <label class="field-label">Race Day Temp (°F)</label>
+            <input id="race-temp" class="settings-input" type="number" min="-20" max="120" step="1" value="55" oninput="saveEnvSettings(); updateEstimates()" style="margin-bottom:0;">
+          </div>
+          <div class="field">
+            <label class="field-label">Race Day Humidity (%)</label>
+            <input id="race-rh" class="settings-input" type="number" min="5" max="99" step="1" value="50" oninput="saveEnvSettings(); updateEstimates()" style="margin-bottom:0;">
+          </div>
+          <div class="field">
+            <label class="field-label">Race Altitude (ft)</label>
+            <input id="race-alt" class="settings-input" type="number" min="-1000" max="15000" step="50" value="0" oninput="saveEnvSettings(); updateEstimates()" style="margin-bottom:0;">
           </div>
         </div>
         <div class="card">
@@ -511,10 +525,11 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 
         <div class="card">
           <div class="card-title">Method Comparison — Marathon</div>
-          <div class="grid-3" style="gap:10px;">
+          <div class="grid-4" style="gap:10px;">
             <div style="text-align:center;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);"><div style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:2px;">VOLUME</div><div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;" id="cmp-vol">—</div></div>
             <div style="text-align:center;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);"><div style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:2px;">CTL/ATL</div><div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;" id="cmp-ctl">—</div></div>
             <div style="text-align:center;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);"><div style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:2px;">CRIT PACE</div><div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;" id="cmp-cp">—</div></div>
+            <div style="text-align:center;padding:12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);"><div style="font-family:IBM Plex Mono,monospace;font-size:8px;color:var(--muted);margin-bottom:7px;letter-spacing:2px;">TANDA</div><div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;" id="cmp-tanda">—</div></div>
           </div>
         </div>
       </div>
@@ -947,6 +962,9 @@ function finalizeApp() {
   // Sync athlete data to KV (so coach can see it)
   syncAthleteToKV();
 
+  // Load estimator environment inputs
+  loadEnvSettings();
+
   // Run estimator
   updateEstimates();
 
@@ -1167,6 +1185,7 @@ const METHOD_DESC = {
   volume: 'Uses your best recent efforts at each distance. Directly grounded in your actual pace data.',
   ctl: 'Chronic Training Load model. Uses your fitness-fatigue balance as a modifier on pace data.',
   cp: 'Fits a 2-parameter Critical Pace curve to all efforts. CP = sustainable ceiling, D′ = anaerobic reserve.',
+  tanda: 'Tanda training formula. Predicts marathon pace from weekly distance and mean training pace.',
 };
 
 function onTaperChange() {
@@ -1178,11 +1197,94 @@ function onTaperChange() {
 function actToMi(a) { return (a.distance || 0) / 1609.34; }
 function actPaceMi(a) { return a.moving_time / actToMi(a); }
 
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+function loadEnvSettings() {
+  const saved = localStorage.getItem('runiq_estimator_env');
+  if (!saved) return;
+  try {
+    const s = JSON.parse(saved);
+    if (s.tempF !== undefined && document.getElementById('race-temp')) {
+      document.getElementById('race-temp').value = s.tempF;
+    }
+    if (s.rh !== undefined && document.getElementById('race-rh')) {
+      document.getElementById('race-rh').value = s.rh;
+    }
+    if (s.altFt !== undefined && document.getElementById('race-alt')) {
+      document.getElementById('race-alt').value = s.altFt;
+    }
+  } catch(e) {}
+}
+
+function saveEnvSettings() {
+  const tempEl = document.getElementById('race-temp');
+  const rhEl = document.getElementById('race-rh');
+  const altEl = document.getElementById('race-alt');
+  if (!tempEl && !rhEl && !altEl) return;
+  const s = {
+    tempF: tempEl ? tempEl.value : '',
+    rh: rhEl ? rhEl.value : '',
+    altFt: altEl ? altEl.value : ''
+  };
+  localStorage.setItem('runiq_estimator_env', JSON.stringify(s));
+}
+
+function durationScale(minutes) {
+  if (!isFinite(minutes)) return 1;
+  const scale = clamp((minutes - 45) / (210 - 45), 0, 1);
+  return 0.3 + 0.7 * scale;
+}
+
+function calcWetBulbC(tempC, rh) {
+  // Stull (2011) approximation for wet-bulb temperature
+  const rhClamped = clamp(rh, 5, 99);
+  const t = clamp(tempC, -20, 50);
+  const tw = t * Math.atan(0.151977 * Math.sqrt(rhClamped + 8.313659))
+    + Math.atan(t + rhClamped)
+    - Math.atan(rhClamped - 1.676331)
+    + 0.00391838 * Math.pow(rhClamped, 1.5) * Math.atan(0.023101 * rhClamped)
+    - 4.686035;
+  return tw;
+}
+
+function calcWBGT_C(tempF, rh) {
+  if (!isFinite(tempF) || !isFinite(rh)) return (tempF - 32) * 5/9;
+  const tempC = (tempF - 32) * 5/9;
+  const tw = calcWetBulbC(tempC, rh);
+  // Assume shade/low sun: Tg ≈ Ta, so WBGT = 0.7*Tw + 0.3*Ta
+  return 0.7 * tw + 0.3 * tempC;
+}
+
+function calcHeatFactor(wbgtC, raceSeconds) {
+  if (!isFinite(wbgtC) || !isFinite(raceSeconds)) return 1;
+  const optimalC = 10;
+  if (wbgtC <= optimalC) return 1;
+  const minutes = raceSeconds / 60;
+  const ability = clamp((minutes - 40) / (240 - 40), 0, 1);
+  const per5C = 0.009 + ability * (0.025 - 0.009);
+  const penalty = per5C * ((wbgtC - optimalC) / 5) * durationScale(minutes);
+  return 1 + clamp(penalty, 0, 0.25);
+}
+
+function calcAltitudeFactor(altFt, raceSeconds) {
+  if (!isFinite(altFt)) return 1;
+  const altM = altFt * 0.3048;
+  const baseM = 300;
+  if (altM <= baseM) return 1;
+  const per1000m = 0.015;
+  const minutes = raceSeconds / 60;
+  const penalty = per1000m * ((altM - baseM) / 1000) * durationScale(minutes);
+  return 1 + clamp(penalty, 0, 0.20);
+}
+
 function updateEstimates() {
   const method = document.getElementById('est-method').value;
   const weeks = parseInt(document.getElementById('est-window').value);
   const tapering = document.getElementById('taper-toggle').checked;
   const raceDays = parseInt(document.getElementById('race-days').value) || 14;
+  const tempF = parseFloat(document.getElementById('race-temp')?.value);
+  const rh = parseFloat(document.getElementById('race-rh')?.value);
+  const altFt = parseFloat(document.getElementById('race-alt')?.value);
 
   document.getElementById('method-blurb').textContent = METHOD_DESC[method];
 
@@ -1207,16 +1309,18 @@ function updateEstimates() {
   document.getElementById('sum-pace').textContent = fmtPace(bestPace);
 
   // Estimate race times
-  const base = estimateFromData(recent, weeks, method, avgMpw);
+  const baseData = estimateFromData(recent, weeks, method, avgMpw);
+  const baseTanda = estimateFromTanda(recent, weeks, avgMpw);
+  const base = method === 'tanda' ? baseTanda : baseData;
   if (!base) return;
 
-  const mods = { volume: 1.0, ctl: 1.008, cp: 1.018 };
-  let { t10k, thm, tm } = { t10k: base.t10k * mods[method], thm: base.thm * mods[method], tm: base.tm * mods[method] };
-
-  // Method comparison
-  document.getElementById('cmp-vol').textContent = fmtTime(base.tm * 1.0);
-  document.getElementById('cmp-ctl').textContent = fmtTime(base.tm * 1.008);
-  document.getElementById('cmp-cp').textContent  = fmtTime(base.tm * 1.018);
+  const mods = { volume: 1.0, ctl: 1.008, cp: 1.018, tanda: 1.0 };
+  const baseAdj = {
+    t10k: base.t10k * mods[method],
+    thm: base.thm * mods[method],
+    tm: base.tm * mods[method]
+  };
+  let { t10k, thm, tm } = { t10k: baseAdj.t10k, thm: baseAdj.thm, tm: baseAdj.tm };
 
   let taperBonus = 0;
   if (tapering) {
@@ -1224,18 +1328,41 @@ function updateEstimates() {
     t10k *= (1-taperBonus); thm *= (1-taperBonus); tm *= (1-taperBonus);
   }
 
+  const wbgtC = calcWBGT_C(tempF, rh);
+  const envM = calcHeatFactor(wbgtC, baseAdj.tm) * calcAltitudeFactor(altFt, baseAdj.tm);
+
+  // Method comparison (environment-adjusted)
+  if (baseData) {
+    const envVol = calcHeatFactor(wbgtC, baseData.tm) * calcAltitudeFactor(altFt, baseData.tm);
+    document.getElementById('cmp-vol').textContent = fmtTime(baseData.tm * 1.0 * envVol);
+    document.getElementById('cmp-ctl').textContent = fmtTime(baseData.tm * 1.008 * envVol);
+    document.getElementById('cmp-cp').textContent  = fmtTime(baseData.tm * 1.018 * envVol);
+  }
+  if (baseTanda) {
+    const envTanda = calcHeatFactor(wbgtC, baseTanda.tm) * calcAltitudeFactor(altFt, baseTanda.tm);
+    document.getElementById('cmp-tanda').textContent = fmtTime(baseTanda.tm * envTanda);
+  }
+
   const pairs = [
-    { id:'10k', t:t10k, base:base.t10k, dist:6.2137 },
-    { id:'hm',  t:thm,  base:base.thm,  dist:13.1094 },
-    { id:'m',   t:tm,   base:base.tm,   dist:26.2188 },
+    { id:'10k', t:t10k, base:baseAdj.t10k, dist:6.2137 },
+    { id:'hm',  t:thm,  base:baseAdj.thm,  dist:13.1094 },
+    { id:'m',   t:tm,   base:baseAdj.tm,   dist:26.2188 },
   ];
+  let t10kFinal = null, thmFinal = null, tmFinal = null;
   pairs.forEach(p => {
-    document.getElementById(`t-${p.id}`).textContent = fmtTime(p.t);
+    const heat = calcHeatFactor(wbgtC, p.t);
+    const alt = calcAltitudeFactor(altFt, p.t);
+    const env = heat * alt;
+    const finalT = p.t * env;
+    if (p.id === '10k') t10kFinal = finalT;
+    if (p.id === 'hm') thmFinal = finalT;
+    if (p.id === 'm') tmFinal = finalT;
+    document.getElementById(`t-${p.id}`).textContent = fmtTime(finalT);
     document.getElementById(`t-${p.id}`).className = `race-time-big${tapering?' taper':''}`;
-    document.getElementById(`p-${p.id}`).textContent = fmtPaceMiDist(p.t, p.dist);
+    document.getElementById(`p-${p.id}`).textContent = fmtPaceMiDist(finalT, p.dist);
     document.getElementById(`card-${p.id}`).className = 'race-card live';
     if (tapering) {
-      const diff = p.base * mods[method] - p.t;
+      const diff = p.base * env - finalT;
       const m = Math.floor(diff/60), s = Math.round(diff%60);
       document.getElementById(`d-${p.id}`).textContent = `−${m}m ${s}s`;
     } else {
@@ -1246,11 +1373,11 @@ function updateEstimates() {
   drawVolChart(weeks);
 
   // Save race estimator outputs so coach portal uses athlete-side estimator data
-  if (APP.athlete && APP.athlete.id && APP.athlete.id !== 1 && t10k && thm && tm) {
+  if (APP.athlete && APP.athlete.id && APP.athlete.id !== 1 && t10kFinal && thmFinal && tmFinal) {
     const raceEstimates = {
-      t10k: fmtTime(t10k),
-      thm: fmtTime(thm),
-      tm: fmtTime(tm)
+      t10k: fmtTime(t10kFinal),
+      thm: fmtTime(thmFinal),
+      tm: fmtTime(tmFinal)
     };
     fetch('/api/athlete-memory', {
       method: 'POST',
@@ -1288,6 +1415,30 @@ function estimateFromData(acts, weeks, method, avgMpw) {
   // Mileage modifier — lower mileage = slower marathon projection
   const mpwFactor = Math.min(1.0, 0.80 + avgMpw/160);
   return { t10k, thm, tm: tm / mpwFactor };
+}
+
+function estimateFromTanda(acts, weeks, avgMpw) {
+  if (!avgMpw || avgMpw < 0.1) return null;
+
+  const raceableRuns = acts.filter(a => actToMi(a) >= 2.0);
+  if (!raceableRuns.length) return null;
+
+  const totalMi = raceableRuns.reduce((s,a) => s + actToMi(a), 0);
+  const totalSec = raceableRuns.reduce((s,a) => s + a.moving_time, 0);
+  if (!totalMi || !totalSec) return null;
+
+  const paceSecPerMi = totalSec / totalMi;
+  const paceSecPerKm = paceSecPerMi / 1.60934;
+  const weeklyKm = avgMpw * 1.60934;
+
+  // Tanda formula: Pm (sec/km) = 17.1 + 140*e^(-0.0053*K) + 0.55*P
+  const pmSecPerKm = 17.1 + 140.0 * Math.exp(-0.0053 * weeklyKm) + 0.55 * paceSecPerKm;
+  const tm = pmSecPerKm * 42.195;
+
+  // Back-calc shorter distances using Riegel scaling
+  const t10k = tm / Math.pow(42.195 / 10.0, 1.06);
+  const thm = tm / Math.pow(42.195 / 21.0975, 1.06);
+  return { t10k, thm, tm };
 }
 
 function drawVolChart(activeWeeks) {
